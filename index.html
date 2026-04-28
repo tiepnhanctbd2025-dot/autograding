@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VDC Check-in v0.7.4</title>
+    <title>VDC Check-in v0.7.5</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -20,7 +20,7 @@
     </style>
 </head>
 <body>
-    <div id="checkLoading" style="text-align:center; padding: 20px;">Đang kiểm tra lớp...</div>
+    <div id="loading" style="text-align:center; padding: 20px;">Đang kiểm tra trạng thái lớp...</div>
 
     <div class="card" id="closedScreen">
         <h2 style="color: #e74c3c;">🔒 LỚP CHƯA MỞ</h2>
@@ -28,16 +28,14 @@
     </div>
 
     <div class="card" id="inputCard" style="display:none;">
-        <h2 style="color: #1a73e8; text-align: center; margin-top:0">ĐIỂM DANH v0.7.4</h2>
-        <input type="text" id="searchInput" placeholder="Nhập STT hoặc Họ tên để tìm..." oninput="autoFind()">
-        
+        <h2 style="color: #1a73e8; text-align: center; margin-top:0">ĐIỂM DANH v0.7.5</h2>
+        <input type="text" id="searchInput" placeholder="Tìm theo STT hoặc Họ tên..." oninput="autoFind()">
         <div class="info-row">
             <input type="text" id="stt" placeholder="STT" readonly style="background:#eee; width: 30%;">
             <input type="text" id="name" placeholder="Tên học viên" readonly style="background:#eee; width: 70%;">
         </div>
-
         <div id="videoContainer"><video id="video" autoplay playsinline></video></div>
-        <div id="statusMsg">Đang xử lý dữ liệu...</div>
+        <div id="statusMsg">Đang xử lý...</div>
         <button id="btnSubmit" onclick="checkin()">XÁC NHẬN CÓ MẶT</button>
     </div>
 
@@ -51,38 +49,26 @@
     <canvas id="canvas"></canvas>
 
     <script>
-        const API = 'https://script.google.com/macros/s/AKfycbzwKuIfVpeUR3vVRcuDN8V48V4mx4eD4FGuPxnpCIS9Srdwx9bMLwDtaW0BdLkmhigv/exec';
+        const API = 'YOUR_WEB_APP_URL'; // Thay bằng URL Script của bạn
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
-        var userMarker;
+        var userLoc;
 
-        window.onload = checkClassStatus;
+        window.onload = checkStatus;
 
-        async function checkClassStatus() {
+        async function checkStatus() {
             try {
                 const res = await fetch(API, { method: 'POST', body: JSON.stringify({action: 'CHECK_STATUS'}) });
                 const data = await res.json();
-                document.getElementById('checkLoading').style.display = 'none';
+                document.getElementById('loading').style.display = 'none';
                 if (data.isActive) {
                     document.getElementById('inputCard').style.display = 'block';
-                    startCamera();
-                    startGPS();
+                    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } }).then(s => video.srcObject = s);
+                    navigator.geolocation.watchPosition(p => userLoc = {lat: p.coords.latitude, lng: p.coords.longitude}, null, {enableHighAccuracy:true});
                 } else {
                     document.getElementById('closedScreen').style.display = 'block';
                 }
-            } catch (e) { document.getElementById('checkLoading').innerText = "Lỗi kết nối!"; }
-        }
-
-        function startCamera() {
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
-            .then(stream => { video.srcObject = stream; })
-            .catch(err => alert("Cần bật Camera để chụp ảnh chân dung!"));
-        }
-
-        function startGPS() {
-            navigator.geolocation.watchPosition(pos => {
-                userMarker = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-            }, null, {enableHighAccuracy: true});
+            } catch (e) { alert("Lỗi kết nối hệ thống!"); }
         }
 
         async function autoFind() {
@@ -93,41 +79,34 @@
             if (data.success) {
                 document.getElementById('stt').value = data.stt;
                 document.getElementById('name').value = data.name;
-            } else {
-                document.getElementById('stt').value = "";
-                document.getElementById('name').value = "Không tìm thấy!";
             }
         }
 
         async function checkin() {
             const stt = document.getElementById('stt').value;
-            if(!stt || !userMarker) return alert("Vui lòng tìm đúng STT/Tên và đợi GPS!");
+            if(!stt || !userLoc) return alert("Vui lòng tìm đúng tên và đợi tín hiệu GPS!");
             
             document.getElementById('statusMsg').style.display = 'block';
             document.getElementById('btnSubmit').disabled = true;
 
-            canvas.width = 320; canvas.height = 240;
             const ctx = canvas.getContext('2d');
+            canvas.width = 320; canvas.height = 240;
             ctx.translate(320, 0); ctx.scale(-1, 1);
             ctx.drawImage(video, 0, 0, 320, 240);
-            const imageData = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
+            const img = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
 
             try {
                 const response = await fetch(API, {
                     method: 'POST',
-                    body: JSON.stringify({stt: stt, userLat: userMarker.lat, userLng: userMarker.lng, image: imageData})
+                    body: JSON.stringify({stt: stt, userLat: userLoc.lat, userLng: userLoc.lng, image: img})
                 });
                 const result = await response.json();
                 if (result.success) {
                     document.getElementById('inputCard').style.display = 'none';
                     document.getElementById('successScreen').style.display = 'block';
-                    document.getElementById('resultInfo').innerHTML = `Học viên: <b>${result.name}</b><br>Đã điểm danh thành công.`;
-                } else {
-                    alert(result.msg);
-                    document.getElementById('statusMsg').style.display = 'none';
-                    document.getElementById('btnSubmit').disabled = false;
-                }
-            } catch (e) { alert("Lỗi kết nối!"); }
+                    document.getElementById('resultInfo').innerHTML = `<b>${result.name}</b> đã điểm danh thành công!`;
+                } else { alert(result.msg); document.getElementById('statusMsg').style.display = 'none'; document.getElementById('btnSubmit').disabled = false; }
+            } catch (e) { alert("Lỗi gửi dữ liệu!"); }
         }
     </script>
 </body>
