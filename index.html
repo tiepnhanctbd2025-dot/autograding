@@ -2,25 +2,39 @@
 <html>
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VDC Check-in v0.2</title>
+    <title>VDC Check-in v0.3</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        body { font-family: sans-serif; padding: 15px; }
+        body { font-family: sans-serif; padding: 15px; background: #f4f7f6; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         #map { height: 250px; border-radius: 10px; border: 1px solid #1a73e8; margin: 10px 0; }
-        input { width: 100%; padding: 10px; margin-bottom: 10px; box-sizing: border-box; }
-        button { width: 100%; padding: 15px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-weight: bold; }
+        input, select { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
+        .version { text-align: center; font-size: 10px; color: #aaa; margin-top: 15px; }
     </style>
 </head>
 <body>
-    <h2 style="color: #1a73e8;">ĐIỂM DANH v0.2</h2>
-    <input type="text" id="name" placeholder="Nhập Họ và Tên">
-    <div id="map"></div>
-    <button onclick="checkin()">XÁC NHẬN CÓ MẶT</button>
+    <div class="card">
+        <h2 style="color: #1a73e8; margin-top:0">VDC CHECK-IN v0.3</h2>
+        <input type="text" id="searchInput" placeholder="Nhập Số thứ tự hoặc Họ tên">
+        <select id="sessionNum">
+            <option value="1">Buổi học 1</option>
+            <option value="2">Buổi học 2</option>
+            <option value="3">Buổi học 3</option>
+            <option value="4">Buổi học 4</option>
+            <option value="5">Buổi học 5</option>
+        </select>
+        <div id="map"></div>
+        <button onclick="checkin()">XÁC NHẬN ĐIỂM DANH</button>
+        <div id="status" style="text-align:center; margin-top:10px; font-size:14px; color:#666;">Đang chờ GPS...</div>
+    </div>
+    <div class="version">VDC Engine v0.3</div>
 
     <script>
         const API = 'https://script.google.com/macros/s/AKfycbzwKuIfVpeUR3vVRcuDN8V48V4mx4eD4FGuPxnpCIS9Srdwx9bMLwDtaW0BdLkmhigv/exec';
         const SID = '1tGe_Hh5kK99hDAOFEQpLOpV3zadm6OSn_h5JA1DkDPE';
+        
         var map = L.map('map').setView([10.76, 106.66], 15);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
         var marker;
@@ -28,19 +42,33 @@
         navigator.geolocation.watchPosition(pos => {
             const {latitude, longitude} = pos.coords;
             if (marker) marker.setLatLng([latitude, longitude]);
-            else marker = L.marker([latitude, longitude]).addTo(map);
+            else marker = L.marker([latitude, longitude]).addTo(map).bindPopup("Bạn").openPopup();
             map.setView([latitude, longitude], 18);
+            document.getElementById('status').innerText = "GPS đã sẵn sàng.";
         }, null, {enableHighAccuracy: true});
 
         function checkin() {
-            const n = document.getElementById('name').value;
-            if(!n || !marker) return alert("Vui lòng nhập tên và đợi GPS");
+            const input = document.getElementById('searchInput').value;
+            const session = document.getElementById('sessionNum').value;
+            if(!input || !marker) return alert("Vui lòng nhập thông tin và đợi GPS");
+            
             const p = marker.getLatLng();
+            document.getElementById('status').innerText = "Đang xác thực danh sách...";
+
             fetch(API, {
                 method: 'POST',
                 mode: 'no-cors',
-                body: JSON.stringify({studentName: n, userLat: p.lat, userLng: p.lng, sheetId: SID})
-            }).then(() => alert("Đã gửi thông tin! Nếu bạn ở trong lớp, tên sẽ hiện trên Sheet."));
+                body: JSON.stringify({
+                    searchInput: input,
+                    userLat: p.lat,
+                    userLng: p.lng,
+                    sheetId: SID,
+                    sessionNum: parseInt(session)
+                })
+            }).then(() => {
+                alert("Đã gửi thông tin! Nếu đúng STT/Tên và trong vùng lớp, kết quả sẽ hiện trên Sheet.");
+                document.getElementById('status').innerText = "Hoàn tất.";
+            }).catch(e => alert("Lỗi: " + e.message));
         }
     </script>
 </body>
