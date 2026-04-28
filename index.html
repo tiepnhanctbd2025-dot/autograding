@@ -1,80 +1,46 @@
 <!DOCTYPE html>
-<html lang="vi">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VDC Safety Check-in v0.1</title>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VDC Check-in v0.2</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        body { font-family: sans-serif; margin: 0; padding: 15px; background: #f4f4f9; }
-        .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
-        #map { height: 250px; width: 100%; margin: 15px 0; border-radius: 8px; border: 1px solid #ddd; }
-        input { width: 100%; padding: 10px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 5px; box-sizing: border-box; }
-        button { width: 100%; padding: 15px; background: #1a73e8; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; }
-        #status { font-size: 14px; color: #666; text-align: center; margin-top: 10px; }
-        .version { position: fixed; bottom: 5px; right: 5px; font-size: 10px; color: #aaa; }
+        body { font-family: sans-serif; padding: 15px; }
+        #map { height: 250px; border-radius: 10px; border: 1px solid #1a73e8; margin: 10px 0; }
+        input { width: 100%; padding: 10px; margin-bottom: 10px; box-sizing: border-box; }
+        button { width: 100%; padding: 15px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2 style="color: #1a73e8; margin-top: 0;">VDC SAFETY v0.1</h2>
-        <input type="text" id="studentName" placeholder="Họ và tên học viên">
-        <input type="text" id="studentId" placeholder="Mã số học viên (nếu có)">
-        <div id="map"></div>
-        <button onclick="performCheckIn()">XÁC NHẬN ĐIỂM DANH</button>
-        <div id="status">Đang chờ tín hiệu GPS...</div>
-    </div>
-    <div class="version">Engine v0.1</div>
+    <h2 style="color: #1a73e8;">ĐIỂM DANH v0.2</h2>
+    <input type="text" id="name" placeholder="Nhập Họ và Tên">
+    <div id="map"></div>
+    <button onclick="checkin()">XÁC NHẬN CÓ MẶT</button>
 
     <script>
-        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzwKuIfVpeUR3vVRcuDN8V48V4mx4eD4FGuPxnpCIS9Srdwx9bMLwDtaW0BdLkmhigv/exec'; // <--- THAY LINK WEB APP CỦA BẠN VÀO ĐÂY
-        const classPos = [10.762622, 106.660172]; // Tọa độ lớp mẫu (Thay đổi tùy ý)
-        
-        var map = L.map('map').setView(classPos, 18);
+        const API = 'https://script.google.com/macros/s/AKfycbzwKuIfVpeUR3vVRcuDN8V48V4mx4eD4FGuPxnpCIS9Srdwx9bMLwDtaW0BdLkmhigv/exec';
+        const SID = '1tGe_Hh5kK99hDAOFEQpLOpV3zadm6OSn_h5JA1DkDPE';
+        var map = L.map('map').setView([10.76, 106.66], 15);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        L.circle(classPos, { color: 'green', radius: 50 }).addTo(map).bindPopup("Vùng lớp học");
-        
-        var userMarker;
+        var marker;
 
-        function updateLocation() {
-            if (navigator.geolocation) {
-                navigator.geolocation.watchPosition(pos => {
-                    const { latitude, longitude } = pos.coords;
-                    if (userMarker) userMarker.setLatLng([latitude, longitude]);
-                    else userMarker = L.marker([latitude, longitude]).addTo(map).bindPopup("Bạn").openPopup();
-                    map.setView([latitude, longitude], 18);
-                    document.getElementById('status').innerText = "Đã xác định được vị trí.";
-                }, err => {
-                    document.getElementById('status').innerText = "Lỗi GPS: " + err.message;
-                }, { enableHighAccuracy: true });
-            }
-        }
-        updateLocation();
+        navigator.geolocation.watchPosition(pos => {
+            const {latitude, longitude} = pos.coords;
+            if (marker) marker.setLatLng([latitude, longitude]);
+            else marker = L.marker([latitude, longitude]).addTo(map);
+            map.setView([latitude, longitude], 18);
+        }, null, {enableHighAccuracy: true});
 
-        function performCheckIn() {
-            const name = document.getElementById('studentName').value;
-            if (!name || !userMarker) return alert("Vui lòng nhập tên và đợi GPS");
-            
-            const pos = userMarker.getLatLng();
-            document.getElementById('status').innerText = "Đang gửi dữ liệu v0.1...";
-
-            fetch(WEB_APP_URL, {
+        function checkin() {
+            const n = document.getElementById('name').value;
+            if(!n || !marker) return alert("Vui lòng nhập tên và đợi GPS");
+            const p = marker.getLatLng();
+            fetch(API, {
                 method: 'POST',
-                mode: 'no-cors', // Dùng no-cors để tránh lỗi chính sách web (CORS) khi test nhanh
-                body: JSON.stringify({
-                    studentName: name,
-                    studentId: document.getElementById('studentId').value,
-                    userLat: pos.lat,
-                    userLng: pos.lng,
-                    classLat: classPos[0],
-                    classLng: classPos[1],
-                    sheetId: '1tGe_Hh5kK99hDAOFEQpLOpV3zadm6OSn_h5JA1DkDPE' // Để test, hãy điền ID Sheet của bạn vào đây
-                })
-            }).then(() => {
-                alert("Yêu cầu đã được gửi! Vui lòng kiểm tra Sheet.");
-                document.getElementById('status').innerText = "Hoàn tất.";
-            }).catch(e => alert("Lỗi kết nối: " + e.message));
+                mode: 'no-cors',
+                body: JSON.stringify({studentName: n, userLat: p.lat, userLng: p.lng, sheetId: SID})
+            }).then(() => alert("Đã gửi thông tin! Nếu bạn ở trong lớp, tên sẽ hiện trên Sheet."));
         }
     </script>
 </body>
