@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VDC Check-in v0.7.1</title>
+    <title>VDC Check-in v0.7.2</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -22,16 +22,16 @@
 <body>
     <div class="card" id="closedScreen">
         <h2 style="color: #e74c3c;">🔒 LỚP CHƯA MỞ</h2>
-        <button onclick="location.reload()" style="background: #34495e; color:white; padding:10px; border:none; border-radius:5px;">TẢI LẠI TRANG</button>
+        <button onclick="location.reload()">TẢI LẠI TRANG</button>
     </div>
 
     <div class="card" id="inputCard">
-        <h2 style="color: #1a73e8; text-align: center; margin-top:0">ĐIỂM DANH v0.7.1</h2>
+        <h2 style="color: #1a73e8; text-align: center; margin-top:0">ĐIỂM DANH v0.7.2</h2>
         <input type="number" id="stt" placeholder="Nhập Số thứ tự (STT)" oninput="autoFind()">
-        <input type="text" id="name" placeholder="Họ và tên" readonly style="background:#f9f9f9">
+        <input type="text" id="name" placeholder="Họ và tên học viên" readonly style="background:#f9f9f9">
         <div id="videoContainer"><video id="video" autoplay playsinline></video></div>
         <div id="map"></div>
-        <div id="statusMsg">Đang tải ảnh & định vị...</div>
+        <div id="statusMsg">Đang xử lý dữ liệu...</div>
         <button id="btnSubmit" onclick="checkin()">XÁC NHẬN CÓ MẶT</button>
     </div>
 
@@ -39,7 +39,7 @@
         <div class="tick-icon">✔</div>
         <h2 style="color: #2ecc71;">THÀNH CÔNG!</h2>
         <p id="resultInfo"></p>
-        <button onclick="location.reload()" style="background: #95a5a6; color:white; padding:10px; border:none; border-radius:5px;">QUAY LẠI</button>
+        <button onclick="location.reload()" style="background: #95a5a6;">QUAY LẠI</button>
     </div>
 
     <canvas id="canvas"></canvas>
@@ -58,7 +58,7 @@
                 const data = await res.json();
                 if (data.isActive) startCamera();
                 else { document.getElementById('inputCard').style.display = 'none'; document.getElementById('closedScreen').style.display = 'block'; }
-            } catch (e) { console.log("Offline"); }
+            } catch (e) { console.log("Lỗi kiểm tra trạng thái."); }
         }
 
         function startCamera() {
@@ -80,16 +80,20 @@
 
         async function autoFind() {
             const val = document.getElementById('stt').value;
-            if (val.length < 1) return;
-            const res = await fetch(API, { method: 'POST', body: JSON.stringify({action: 'GET_INFO', input: val}) });
-            const data = await res.json();
-            if (data.success) document.getElementById('name').value = data.name;
+            const nameInput = document.getElementById('name');
+            if (val.length < 1) { nameInput.value = ""; return; }
+            nameInput.value = "Đang tìm...";
+            try {
+                const res = await fetch(API, { method: 'POST', body: JSON.stringify({action: 'GET_INFO', input: val}) });
+                const data = await res.json();
+                nameInput.value = data.success ? data.name : "Không tìm thấy STT!";
+            } catch (e) { nameInput.value = "Lỗi kết nối!"; }
         }
 
         async function checkin() {
             const stt = document.getElementById('stt').value;
             const name = document.getElementById('name').value;
-            if(!stt || !marker) return alert("Nhập STT và đợi GPS/Camera!");
+            if(!stt || name.includes("Không") || !marker) return alert("Nhập STT hợp lệ và đợi GPS!");
             
             document.getElementById('statusMsg').style.display = 'block';
             document.getElementById('btnSubmit').disabled = true;
