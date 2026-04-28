@@ -2,29 +2,34 @@
 <html>
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VDC Admin v0.3</title>
+    <title>VDC Admin v0.4</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
-        body { font-family: sans-serif; padding: 15px; background: #fff5f5; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        #map { height: 350px; border-radius: 10px; border: 2px solid #d93025; margin: 15px 0; }
-        button { width: 100%; padding: 15px; background: #d93025; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
+        body { font-family: sans-serif; padding: 15px; background: #fff5f5; margin: 0; }
+        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
+        #map { height: 300px; border-radius: 10px; border: 2px solid #d93025; margin: 15px 0; }
+        select, button { width: 100%; padding: 15px; margin-bottom: 10px; border-radius: 8px; font-weight: bold; font-size: 16px; border: 1px solid #ddd; }
+        button { background: #d93025; color: white; border: none; cursor: pointer; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h2 style="color: #d93025; text-align: center; margin-top:0">QUẢN LÝ LỚP v0.3</h2>
-        <div id="status" style="text-align:center; color:#666">Đang lấy tọa độ giảng viên...</div>
+        <h2 style="color: #d93025; text-align: center; margin-top:0">QUẢN LÝ LỚP v0.4</h2>
+        <label style="font-size: 14px; color: #666;">Chọn buổi học hiện tại:</label>
+        <select id="sessionNum">
+            <option value="1">Buổi học 1</option><option value="2">Buổi học 2</option>
+            <option value="3">Buổi học 3</option><option value="4">Buổi học 4</option>
+            <option value="5">Buổi học 5</option>
+        </select>
         <div id="map"></div>
-        <button onclick="lockLocation()">CHỐT VỊ TRÍ LỚP TẠI ĐÂY</button>
+        <button onclick="lockLocation()">CHỐT VỊ TRÍ & BUỔI HỌC</button>
+        <div id="status" style="text-align:center; font-size:12px; margin-top:10px; color:#999;">Đang tải GPS...</div>
     </div>
-    <div style="text-align: center; font-size: 10px; color: #aaa; margin-top: 15px;">VDC Engine v0.3 | Admin</div>
 
     <script>
         const API = 'https://script.google.com/macros/s/AKfycbzwKuIfVpeUR3vVRcuDN8V48V4mx4eD4FGuPxnpCIS9Srdwx9bMLwDtaW0BdLkmhigv/exec';
         const SID = '1tGe_Hh5kK99hDAOFEQpLOpV3zadm6OSn_h5JA1DkDPE';
-        
         var map = L.map('map').setView([10.76, 106.66], 15);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
         var marker;
@@ -34,21 +39,21 @@
             if (marker) marker.setLatLng([latitude, longitude]);
             else marker = L.marker([latitude, longitude]).addTo(map).bindPopup("Vị trí của tôi").openPopup();
             map.setView([latitude, longitude], 18);
-            document.getElementById('status').innerText = "GPS Giảng viên sẵn sàng.";
+            document.getElementById('status').innerText = "GPS sẵn sàng.";
         }, null, {enableHighAccuracy: true});
 
         function lockLocation() {
-            if(!marker) return alert("Chưa có GPS");
+            if(!marker) return alert("Chưa có tín hiệu GPS");
             const p = marker.getLatLng();
-            document.getElementById('status').innerText = "Đang gửi tọa độ chốt lớp...";
+            const session = document.getElementById('sessionNum').value;
+            document.getElementById('status').innerText = "Đang gửi lệnh chốt...";
             
             fetch(API, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify({action: 'SET_CLASS_LOCATION', lat: p.lat, lng: p.lng, sheetId: SID})
+                method: 'POST', mode: 'no-cors',
+                body: JSON.stringify({action: 'SET_CLASS_LOCATION', lat: p.lat, lng: p.lng, sheetId: SID, sessionNum: session})
             }).then(() => {
-                alert("Đã kích hoạt vùng điểm danh 50m quanh vị trí này!");
-                document.getElementById('status').innerText = "Lớp đã chốt vị trí.";
+                alert("Đã chốt vị trí lớp và thiết lập: Buổi " + session);
+                document.getElementById('status').innerText = "Đã chốt Buổi " + session;
             });
         }
     </script>
