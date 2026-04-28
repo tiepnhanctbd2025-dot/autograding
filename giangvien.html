@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VDC Admin v0.4</title>
+    <title>VDC Admin v0.6</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -10,21 +10,21 @@
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
         #map { height: 300px; border-radius: 10px; border: 2px solid #d93025; margin: 15px 0; }
         select, button { width: 100%; padding: 15px; margin-bottom: 10px; border-radius: 8px; font-weight: bold; font-size: 16px; border: 1px solid #ddd; }
-        button { background: #d93025; color: white; border: none; cursor: pointer; }
+        button { color: white; border: none; cursor: pointer; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h2 style="color: #d93025; text-align: center; margin-top:0">QUẢN LÝ LỚP v0.4</h2>
-        <label style="font-size: 14px; color: #666;">Chọn buổi học hiện tại:</label>
+        <h2 style="color: #d93025; text-align: center; margin-top:0">QUẢN LÝ LỚP v0.6</h2>
         <select id="sessionNum">
             <option value="1">Buổi học 1</option><option value="2">Buổi học 2</option>
             <option value="3">Buổi học 3</option><option value="4">Buổi học 4</option>
             <option value="5">Buổi học 5</option>
         </select>
         <div id="map"></div>
-        <button onclick="lockLocation()">CHỐT VỊ TRÍ & BUỔI HỌC</button>
-        <div id="status" style="text-align:center; font-size:12px; margin-top:10px; color:#999;">Đang tải GPS...</div>
+        <button onclick="manageLocation('OPEN')" style="background:#d93025;">MỞ LỚP & CHỐT VỊ TRÍ</button>
+        <button onclick="manageLocation('CLOSE')" style="background:#34495e;">ĐÓNG LỚP HỌC</button>
+        <div id="status" style="text-align:center; font-size:12px; color:#999; margin-top:10px;">Đang lấy GPS...</div>
     </div>
 
     <script>
@@ -37,24 +37,28 @@
         navigator.geolocation.watchPosition(pos => {
             const {latitude, longitude} = pos.coords;
             if (marker) marker.setLatLng([latitude, longitude]);
-            else marker = L.marker([latitude, longitude]).addTo(map).bindPopup("Vị trí của tôi").openPopup();
+            else marker = L.marker([latitude, longitude]).addTo(map).bindPopup("Vị trí lớp học").openPopup();
             map.setView([latitude, longitude], 18);
             document.getElementById('status').innerText = "GPS sẵn sàng.";
         }, null, {enableHighAccuracy: true});
 
-        function lockLocation() {
-            if(!marker) return alert("Chưa có tín hiệu GPS");
-            const p = marker.getLatLng();
+        async function manageLocation(mode) {
             const session = document.getElementById('sessionNum').value;
-            document.getElementById('status').innerText = "Đang gửi lệnh chốt...";
+            let payload = { action: 'SET_CLASS_LOCATION', sheetId: SID, status: mode, sessionNum: session };
             
-            fetch(API, {
-                method: 'POST', mode: 'no-cors',
-                body: JSON.stringify({action: 'SET_CLASS_LOCATION', lat: p.lat, lng: p.lng, sheetId: SID, sessionNum: session})
-            }).then(() => {
-                alert("Đã chốt vị trí lớp và thiết lập: Buổi " + session);
-                document.getElementById('status').innerText = "Đã chốt Buổi " + session;
-            });
+            if(mode === 'OPEN') {
+                if(!marker) return alert("Chưa có GPS, vui lòng đợi giây lát.");
+                const p = marker.getLatLng();
+                payload.lat = p.lat; payload.lng = p.lng;
+            }
+
+            try {
+                const response = await fetch(API, { method: 'POST', body: JSON.stringify(payload) });
+                const res = await response.json();
+                if(res.success) alert(mode === 'OPEN' ? "Đã MỞ LỚP & chốt vị trí Buổi " + session : "Lớp đã được ĐÓNG.");
+            } catch (e) {
+                alert("Lỗi kết nối máy chủ.");
+            }
         }
     </script>
 </body>
