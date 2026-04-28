@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VDC Admin v0.7.1</title>
+    <title>VDC Admin v0.7.2</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -15,28 +15,51 @@
 </head>
 <body>
     <div class="card">
-        <h2 style="color: #d93025; text-align: center; margin-top:0">QUẢN LÝ v0.7.1</h2>
-        <select id="sessionNum">
-            <option value="1">Buổi học 1</option><option value="2">Buổi học 2</option>
-            <option value="3">Buổi học 3</option><option value="4">Buổi học 4</option>
-            <option value="5">Buổi học 5</option>
-        </select>
+        <h2 style="color: #d93025; text-align: center;">QUẢN LÝ v0.7.2</h2>
+        
+        <div id="setupArea">
+            <label style="font-size: 14px; color: #666;">Chọn buổi học:</label>
+            <select id="sessionNum">
+                <option value="1">Buổi học 1</option><option value="2">Buổi học 2</option>
+                <option value="3">Buổi học 3</option><option value="4">Buổi học 4</option>
+                <option value="5">Buổi học 5</option>
+            </select>
+            <button id="btnOpen" onclick="manageLocation('OPEN')" style="background:#d93025;">MỞ LỚP & CHỐT VỊ TRÍ</button>
+        </div>
+
+        <button id="btnClose" onclick="manageLocation('CLOSE')" style="background:#34495e; display:none;">ĐÓNG LỚP HIỆN TẠI</button>
+
         <div id="map"></div>
-        <button onclick="manageLocation('OPEN')" style="background:#d93025;">MỞ LỚP & CHỐT VỊ TRÍ</button>
-        <button onclick="manageLocation('CLOSE')" style="background:#34495e;">ĐÓNG LỚP</button>
+        <div id="status" style="text-align:center; font-size:12px; color:#999; margin-top:10px;">Đang tải...</div>
     </div>
+
     <script>
         const API = 'https://script.google.com/macros/s/AKfycbzwKuIfVpeUR3vVRcuDN8V48V4mx4eD4FGuPxnpCIS9Srdwx9bMLwDtaW0BdLkmhigv/exec';
-        var map = L.map('map').setView([10.76, 106.66], 15);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        var marker;
+        var map, marker;
 
-        navigator.geolocation.watchPosition(pos => {
-            const {latitude, longitude} = pos.coords;
-            if (marker) marker.setLatLng([latitude, longitude]);
-            else marker = L.marker([latitude, longitude]).addTo(map).bindPopup("Vị trí lớp").openPopup();
-            map.setView([latitude, longitude], 18);
-        }, null, {enableHighAccuracy: true});
+        window.onload = async () => {
+            initMap();
+            const res = await fetch(API, {method: 'POST', body: JSON.stringify({action: 'CHECK_STATUS'})});
+            const data = await res.json();
+            toggleUI(data.isActive);
+        };
+
+        function toggleUI(isActive) {
+            document.getElementById('setupArea').style.display = isActive ? 'none' : 'block';
+            document.getElementById('btnClose').style.display = isActive ? 'block' : 'none';
+            document.getElementById('status').innerText = isActive ? "Lớp đang MỞ" : "Lớp đang ĐÓNG";
+        }
+
+        function initMap() {
+            map = L.map('map').setView([10.76, 106.66], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            navigator.geolocation.watchPosition(pos => {
+                const {latitude, longitude} = pos.coords;
+                if (marker) marker.setLatLng([latitude, longitude]);
+                else marker = L.marker([latitude, longitude]).addTo(map).bindPopup("Vị trí lớp").openPopup();
+                map.setView([latitude, longitude], 18);
+            }, null, {enableHighAccuracy: true});
+        }
 
         async function manageLocation(mode) {
             const session = document.getElementById('sessionNum').value;
@@ -48,8 +71,8 @@
             }
             try {
                 const res = await fetch(API, { method: 'POST', body: JSON.stringify(payload) });
-                const data = await res.json();
-                if(data.success) alert(mode === 'OPEN' ? "Đã MỞ LỚP Buổi " + session : "Đã ĐÓNG LỚP.");
+                const result = await res.json();
+                if(result.success) toggleUI(mode === 'OPEN');
             } catch (e) { alert("Lỗi kết nối!"); }
         }
     </script>
