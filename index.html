@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VDC Check-in v0.8</title>
+    <title>VDC Check-in v0.9</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -21,14 +21,12 @@
 </head>
 <body>
     <div id="loading" style="text-align:center; padding: 20px;">Đang kết nối hệ thống...</div>
-
     <div class="card" id="closedScreen">
         <h2 style="color: #e74c3c;">🔒 LỚP CHƯA MỞ</h2>
         <button onclick="location.reload()">TẢI LẠI TRANG</button>
     </div>
-
     <div class="card" id="inputCard" style="display:none;">
-        <h2 style="color: #1a73e8; text-align: center; margin-top:0">ĐIỂM DANH v0.8</h2>
+        <h2 style="color: #1a73e8; text-align: center; margin-top:0">ĐIỂM DANH v0.9</h2>
         <input type="text" id="searchInput" placeholder="Nhập Họ tên hoặc STT..." oninput="autoFind()">
         <div class="info-row">
             <input type="text" id="stt" placeholder="STT" readonly style="background:#eee; width: 30%;">
@@ -38,18 +36,16 @@
         <div id="statusMsg">Đang xử lý dữ liệu...</div>
         <button id="btnSubmit" onclick="checkin()">XÁC NHẬN CÓ MẶT</button>
     </div>
-
     <div class="card" id="successScreen">
         <div class="tick-icon">✔</div>
         <h2 style="color: #2ecc71;">THÀNH CÔNG!</h2>
         <p id="resultInfo"></p>
         <button onclick="location.reload()" style="background: #95a5a6; margin-top: 20px;">QUAY LẠI</button>
     </div>
-
     <canvas id="canvas"></canvas>
 
     <script>
-        const API = 'https://script.google.com/macros/s/AKfycbwxyl1B6GG7M963hRGp38QrKoFFRedzeVjkGNMTca_cJX_o67X4bu0pdneOdpNZ_BiP/exec';
+        const API = 'https://script.google.com/macros/s/AKfycbw_0bC4RVeQuwQEhx4th5UIIVpioCFmEcelW4suLR86pdXaZvFHRRByWLWuqvEALjIx/exec';
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         var userLoc;
@@ -85,20 +81,17 @@
         async function checkin() {
             const stt = document.getElementById('stt').value;
             if(!stt || !userLoc) return alert("Vui lòng tìm đúng tên và bật GPS!");
-            
             document.getElementById('statusMsg').style.display = 'block';
             document.getElementById('btnSubmit').disabled = true;
-
             const ctx = canvas.getContext('2d');
             canvas.width = 320; canvas.height = 240;
             ctx.translate(320, 0); ctx.scale(-1, 1);
             ctx.drawImage(video, 0, 0, 320, 240);
             const img = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
-
             try {
                 const response = await fetch(API, {
                     method: 'POST',
-                    body: JSON.stringify({stt: stt, userLat: userLoc.lat, userLng: userLoc.lng, image: img})
+                    body: JSON.stringify({stt: stt, userLat: userLoc.lat, userLng: userLoc.lng, image: img, instructorEmail: "Học viên"})
                 });
                 const result = await response.json();
                 if (result.success) {
