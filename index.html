@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VDC Check-in v0.7.5</title>
+    <title>VDC Check-in v0.8</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -20,7 +20,7 @@
     </style>
 </head>
 <body>
-    <div id="loading" style="text-align:center; padding: 20px;">Đang kiểm tra trạng thái lớp...</div>
+    <div id="loading" style="text-align:center; padding: 20px;">Đang kết nối hệ thống...</div>
 
     <div class="card" id="closedScreen">
         <h2 style="color: #e74c3c;">🔒 LỚP CHƯA MỞ</h2>
@@ -28,14 +28,14 @@
     </div>
 
     <div class="card" id="inputCard" style="display:none;">
-        <h2 style="color: #1a73e8; text-align: center; margin-top:0">ĐIỂM DANH v0.7.5</h2>
-        <input type="text" id="searchInput" placeholder="Tìm theo STT hoặc Họ tên..." oninput="autoFind()">
+        <h2 style="color: #1a73e8; text-align: center; margin-top:0">ĐIỂM DANH v0.8</h2>
+        <input type="text" id="searchInput" placeholder="Nhập Họ tên hoặc STT..." oninput="autoFind()">
         <div class="info-row">
             <input type="text" id="stt" placeholder="STT" readonly style="background:#eee; width: 30%;">
             <input type="text" id="name" placeholder="Tên học viên" readonly style="background:#eee; width: 70%;">
         </div>
         <div id="videoContainer"><video id="video" autoplay playsinline></video></div>
-        <div id="statusMsg">Đang xử lý...</div>
+        <div id="statusMsg">Đang xử lý dữ liệu...</div>
         <button id="btnSubmit" onclick="checkin()">XÁC NHẬN CÓ MẶT</button>
     </div>
 
@@ -49,7 +49,7 @@
     <canvas id="canvas"></canvas>
 
     <script>
-        const API = 'YOUR_WEB_APP_URL'; // Thay bằng URL Script của bạn
+        const API = 'https://script.google.com/macros/s/AKfycbwxyl1B6GG7M963hRGp38QrKoFFRedzeVjkGNMTca_cJX_o67X4bu0pdneOdpNZ_BiP/exec';
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
         var userLoc;
@@ -68,7 +68,7 @@
                 } else {
                     document.getElementById('closedScreen').style.display = 'block';
                 }
-            } catch (e) { alert("Lỗi kết nối hệ thống!"); }
+            } catch (e) { document.getElementById('loading').innerText = "Lỗi kết nối!"; }
         }
 
         async function autoFind() {
@@ -84,7 +84,7 @@
 
         async function checkin() {
             const stt = document.getElementById('stt').value;
-            if(!stt || !userLoc) return alert("Vui lòng tìm đúng tên và đợi tín hiệu GPS!");
+            if(!stt || !userLoc) return alert("Vui lòng tìm đúng tên và bật GPS!");
             
             document.getElementById('statusMsg').style.display = 'block';
             document.getElementById('btnSubmit').disabled = true;
