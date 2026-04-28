@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <h2>VDC Safety - Điểm danh QR Động</h2>
+    <button onclick="checkIn()">QUÉT VÀ ĐIỂM DANH</button>
+    <p id="status"></p>
+
+    <script>
+    function checkIn() {
+        document.getElementById('status').innerText = "Đang lấy vị trí...";
+        
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(function(position) {
+                const data = {
+                    lat: position.coords.latitude,
+                    lng: position.coords.longitude,
+                    token: "MA_QUET_DUOC_TU_QR" // Giả định lấy từ camera
+                };
+                
+                // Gửi dữ liệu về Web App của bạn
+                fetch('URL_WEB_APP_CUA_BAN', {
+                    method: 'POST',
+                    body: JSON.stringify(data)
+                })
+                .then(res => res.json())
+                .then(out => {
+                    document.getElementById('status').innerText = "Kết quả: " + out.message;
+                });
+            });
+        }
+    }
+    </script>
+</body>
+</html>
