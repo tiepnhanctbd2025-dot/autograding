@@ -28,7 +28,7 @@
     <div class="version">Engine v0.1</div>
 
     <script>
-        const WEB_APP_URL = 'YOUR_WEB_APP_URL'; // <--- THAY LINK WEB APP CỦA BẠN VÀO ĐÂY
+        const WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzwKuIfVpeUR3vVRcuDN8V48V4mx4eD4FGuPxnpCIS9Srdwx9bMLwDtaW0BdLkmhigv/exec'; // <--- THAY LINK WEB APP CỦA BẠN VÀO ĐÂY
         const classPos = [10.762622, 106.660172]; // Tọa độ lớp mẫu (Thay đổi tùy ý)
         
         var map = L.map('map').setView(classPos, 18);
@@ -69,7 +69,7 @@
                     userLng: pos.lng,
                     classLat: classPos[0],
                     classLng: classPos[1],
-                    sheetId: 'ID_SHEET_CUA_BAN' // Để test, hãy điền ID Sheet của bạn vào đây
+                    sheetId: '1tGe_Hh5kK99hDAOFEQpLOpV3zadm6OSn_h5JA1DkDPE' // Để test, hãy điền ID Sheet của bạn vào đây
                 })
             }).then(() => {
                 alert("Yêu cầu đã được gửi! Vui lòng kiểm tra Sheet.");
