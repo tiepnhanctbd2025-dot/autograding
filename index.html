@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VDC Check-in v0.5</title>
+    <title>VDC Check-in v0.5.2</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -11,83 +11,105 @@
         #map { height: 250px; border-radius: 10px; border: 1px solid #1a73e8; margin: 10px 0; }
         input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
         button { width: 100%; padding: 15px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
-        #successScreen { display: none; text-align: center; padding: 30px 10px; }
+        #successScreen, #closedScreen { display: none; text-align: center; padding: 30px 10px; }
         .tick-icon { font-size: 70px; color: #2ecc71; margin-bottom: 15px; }
-        .loader { display: none; text-align: center; color: #1a73e8; font-weight: bold; margin-bottom: 10px; }
+        .lock-icon { font-size: 70px; color: #e74c3c; margin-bottom: 15px; }
+        .loader { text-align: center; color: #1a73e8; font-weight: bold; padding: 20px; }
     </style>
 </head>
 <body>
-    <div class="card" id="inputCard">
-        <h2 style="color: #1a73e8; text-align: center; margin-top:0">ĐIỂM DANH v0.5</h2>
+    <div id="checkLoading" class="loader">Đang kiểm tra trạng thái lớp học...</div>
+
+    <div class="card" id="closedScreen">
+        <div class="lock-icon">🔒</div>
+        <h2 style="color: #e74c3c; margin: 0;">LỚP HỌC CHƯA MỞ!</h2>
+        <p style="color: #666;">Vui lòng quay lại sau khi giảng viên đã kích hoạt vị trí.</p>
+        <button onclick="location.reload()" style="background: #34495e; margin-top: 20px;">TẢI LẠI TRANG</button>
+    </div>
+
+    <div class="card" id="inputCard" style="display:none;">
+        <h2 style="color: #1a73e8; text-align: center; margin-top:0">ĐIỂM DANH v0.5.2</h2>
         <input type="number" id="stt" placeholder="Số thứ tự (STT)" oninput="autoFind('STT')">
         <input type="text" id="name" placeholder="Họ và tên học viên" oninput="autoFind('NAME')">
         <div id="map"></div>
-        <div class="loader" id="loading">Đang xác thực dữ liệu...</div>
+        <div id="statusMsg" style="text-align:center; color:#1a73e8; font-weight:bold; margin-bottom:10px; display:none;">Đang gửi dữ liệu...</div>
         <button id="btnSubmit" onclick="checkin()">XÁC NHẬN CÓ MẶT</button>
     </div>
 
     <div class="card" id="successScreen">
         <div class="tick-icon">✔</div>
-        <h2 style="color: #2ecc71; margin: 0;">ĐIỂM DANH XONG!</h2>
-        <p id="resultInfo" style="color: #666; line-height: 1.5;"></p>
+        <h2 style="color: #2ecc71; margin: 0;">THÀNH CÔNG!</h2>
+        <p id="resultInfo" style="color: #666; margin-top:10px;"></p>
         <button onclick="location.reload()" style="background: #95a5a6; margin-top: 20px;">QUAY LẠI</button>
     </div>
 
     <script>
         const API = 'https://script.google.com/macros/s/AKfycbzwKuIfVpeUR3vVRcuDN8V48V4mx4eD4FGuPxnpCIS9Srdwx9bMLwDtaW0BdLkmhigv/exec';
         const SID = '1tGe_Hh5kK99hDAOFEQpLOpV3zadm6OSn_h5JA1DkDPE';
-        var map = L.map('map').setView([10.76, 106.66], 15);
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-        var marker;
+        
+        window.onload = checkClassStatus;
 
-        navigator.geolocation.watchPosition(pos => {
-            const {latitude, longitude} = pos.coords;
-            if (marker) marker.setLatLng([latitude, longitude]);
-            else marker = L.marker([latitude, longitude]).addTo(map);
-            map.setView([latitude, longitude], 18);
-        }, null, {enableHighAccuracy: true});
+        async function checkClassStatus() {
+            try {
+                const response = await fetch(API, { method: 'POST', body: JSON.stringify({action: 'CHECK_STATUS', sheetId: SID}) });
+                const data = await response.json();
+                document.getElementById('checkLoading').style.display = 'none';
+                if (data.isActive) {
+                    document.getElementById('inputCard').style.display = 'block';
+                    initMap();
+                } else {
+                    document.getElementById('closedScreen').style.display = 'block';
+                }
+            } catch (e) {
+                document.getElementById('checkLoading').innerText = "Lỗi kết nối máy chủ!";
+            }
+        }
+
+        var map, marker;
+        function initMap() {
+            map = L.map('map').setView([10.76, 106.66], 15);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+            navigator.geolocation.watchPosition(pos => {
+                const {latitude, longitude} = pos.coords;
+                if (marker) marker.setLatLng([latitude, longitude]);
+                else marker = L.marker([latitude, longitude]).addTo(map);
+                map.setView([latitude, longitude], 18);
+            }, null, {enableHighAccuracy: true});
+        }
 
         async function autoFind(type) {
             const val = (type === 'STT') ? document.getElementById('stt').value : document.getElementById('name').value;
             if (!val || (type === 'NAME' && val.length < 3)) return;
-            try {
-                const response = await fetch(API, { method: 'POST', body: JSON.stringify({action: 'GET_INFO', input: val, sheetId: SID}) });
-                const resData = await response.json();
-                if (resData.success) {
-                    document.getElementById('stt').value = resData.stt;
-                    document.getElementById('name').value = resData.name;
-                }
-            } catch (e) { console.log("Searching..."); }
+            const response = await fetch(API, { method: 'POST', body: JSON.stringify({action: 'GET_INFO', input: val, sheetId: SID}) });
+            const resData = await response.json();
+            if (resData.success) {
+                document.getElementById('stt').value = resData.stt;
+                document.getElementById('name').value = resData.name;
+            }
         }
 
         async function checkin() {
             const stt = document.getElementById('stt').value;
             const name = document.getElementById('name').value;
-            if(!stt || !marker) return alert("Vui lòng nhập đúng STT/Tên và đợi GPS");
+            if(!stt || !marker) return alert("Vui lòng nhập STT/Tên và đợi GPS");
             
-            document.getElementById('loading').style.display = 'block';
+            document.getElementById('statusMsg').style.display = 'block';
             document.getElementById('btnSubmit').style.display = 'none';
 
-            try {
-                const p = marker.getLatLng();
-                const response = await fetch(API, {
-                    method: 'POST',
-                    body: JSON.stringify({stt: stt, userLat: p.lat, userLng: p.lng, sheetId: SID})
-                });
-                const result = await response.json();
-                
-                if (result.success) {
-                    document.getElementById('inputCard').style.display = 'none';
-                    document.getElementById('successScreen').style.display = 'block';
-                    document.getElementById('resultInfo').innerText = `Học viên: ${name}\nSTT: ${stt}\nĐã được ghi nhận vào hệ thống.`;
-                } else {
-                    alert("LỖI: " + result.msg);
-                    document.getElementById('loading').style.display = 'none';
-                    document.getElementById('btnSubmit').style.display = 'block';
-                }
-            } catch (e) {
-                alert("Lỗi kết nối Server! Vui lòng thử lại.");
-                document.getElementById('loading').style.display = 'none';
+            const p = marker.getLatLng();
+            const response = await fetch(API, {
+                method: 'POST',
+                body: JSON.stringify({stt: stt, userLat: p.lat, userLng: p.lng, sheetId: SID})
+            });
+            const result = await response.json();
+            
+            if (result.success) {
+                document.getElementById('inputCard').style.display = 'none';
+                document.getElementById('successScreen').style.display = 'block';
+                document.getElementById('resultInfo').innerText = `Học viên: ${name}\nSTT: ${stt}\nĐã được ghi nhận thành công.`;
+            } else {
+                alert("THÔNG BÁO: " + result.msg);
+                document.getElementById('statusMsg').style.display = 'none';
                 document.getElementById('btnSubmit').style.display = 'block';
             }
         }
