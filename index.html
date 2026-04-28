@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VDC Check-in v0.4</title>
+    <title>VDC Check-in v0.5</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -11,18 +11,26 @@
         #map { height: 250px; border-radius: 10px; border: 1px solid #1a73e8; margin: 10px 0; }
         input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
         button { width: 100%; padding: 15px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
-        .info-msg { font-size: 12px; color: #1a73e8; margin-bottom: 10px; text-align: center; }
+        #successScreen { display: none; text-align: center; padding: 30px 10px; }
+        .tick-icon { font-size: 70px; color: #2ecc71; margin-bottom: 15px; }
+        .loader { display: none; text-align: center; color: #1a73e8; font-weight: bold; margin-bottom: 10px; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <h2 style="color: #1a73e8; text-align: center; margin-top:0">ĐIỂM DANH v0.4</h2>
-        <div class="info-msg">Hệ thống sẽ tự điền tên khi bạn nhập STT</div>
+    <div class="card" id="inputCard">
+        <h2 style="color: #1a73e8; text-align: center; margin-top:0">ĐIỂM DANH v0.5</h2>
         <input type="number" id="stt" placeholder="Số thứ tự (STT)" oninput="autoFind('STT')">
         <input type="text" id="name" placeholder="Họ và tên học viên" oninput="autoFind('NAME')">
         <div id="map"></div>
-        <button onclick="checkin()">XÁC NHẬN CÓ MẶT</button>
-        <div id="status" style="text-align:center; font-size:12px; color:#999; margin-top:10px;">VDC Engine v0.4</div>
+        <div class="loader" id="loading">Đang xác thực dữ liệu...</div>
+        <button id="btnSubmit" onclick="checkin()">XÁC NHẬN CÓ MẶT</button>
+    </div>
+
+    <div class="card" id="successScreen">
+        <div class="tick-icon">✔</div>
+        <h2 style="color: #2ecc71; margin: 0;">ĐIỂM DANH XONG!</h2>
+        <p id="resultInfo" style="color: #666; line-height: 1.5;"></p>
+        <button onclick="location.reload()" style="background: #95a5a6; margin-top: 20px;">QUAY LẠI</button>
     </div>
 
     <script>
@@ -42,12 +50,8 @@
         async function autoFind(type) {
             const val = (type === 'STT') ? document.getElementById('stt').value : document.getElementById('name').value;
             if (!val || (type === 'NAME' && val.length < 3)) return;
-            
             try {
-                const response = await fetch(API, {
-                    method: 'POST',
-                    body: JSON.stringify({action: 'GET_INFO', input: val, sheetId: SID})
-                });
+                const response = await fetch(API, { method: 'POST', body: JSON.stringify({action: 'GET_INFO', input: val, sheetId: SID}) });
                 const resData = await response.json();
                 if (resData.success) {
                     document.getElementById('stt').value = resData.stt;
@@ -56,15 +60,36 @@
             } catch (e) { console.log("Searching..."); }
         }
 
-        function checkin() {
-            const sttVal = document.getElementById('stt').value;
-            if(!sttVal || !marker) return alert("Vui lòng nhập đúng STT/Tên và đợi GPS");
-            const p = marker.getLatLng();
+        async function checkin() {
+            const stt = document.getElementById('stt').value;
+            const name = document.getElementById('name').value;
+            if(!stt || !marker) return alert("Vui lòng nhập đúng STT/Tên và đợi GPS");
             
-            fetch(API, {
-                method: 'POST', mode: 'no-cors',
-                body: JSON.stringify({stt: sttVal, userLat: p.lat, userLng: p.lng, sheetId: SID})
-            }).then(() => alert("Đã gửi yêu cầu điểm danh!"));
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('btnSubmit').style.display = 'none';
+
+            try {
+                const p = marker.getLatLng();
+                const response = await fetch(API, {
+                    method: 'POST',
+                    body: JSON.stringify({stt: stt, userLat: p.lat, userLng: p.lng, sheetId: SID})
+                });
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('inputCard').style.display = 'none';
+                    document.getElementById('successScreen').style.display = 'block';
+                    document.getElementById('resultInfo').innerText = `Học viên: ${name}\nSTT: ${stt}\nĐã được ghi nhận vào hệ thống.`;
+                } else {
+                    alert("LỖI: " + result.msg);
+                    document.getElementById('loading').style.display = 'none';
+                    document.getElementById('btnSubmit').style.display = 'block';
+                }
+            } catch (e) {
+                alert("Lỗi kết nối Server! Vui lòng thử lại.");
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('btnSubmit').style.display = 'block';
+            }
         }
     </script>
 </body>
