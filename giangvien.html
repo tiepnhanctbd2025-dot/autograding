@@ -2,88 +2,89 @@
 <html>
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VDC Admin v0.7.4</title>
+    <title>VDC Admin v0.7.5</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         body { font-family: sans-serif; padding: 15px; background: #fff5f5; }
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
-        #map { height: 300px; border-radius: 10px; margin: 15px 0; border: 2px solid #d93025; }
-        select, button { width: 100%; padding: 15px; margin-bottom: 10px; border-radius: 8px; font-weight: bold; font-size: 16px; border: 1px solid #ddd;}
+        input, select, button { width: 100%; padding: 15px; margin-bottom: 10px; border-radius: 8px; font-weight: bold; border: 1px solid #ddd; box-sizing: border-box;}
         button { color: white; border: none; cursor: pointer; }
+        #map { height: 250px; border-radius: 10px; margin: 10px 0; border: 2px solid #d93025; }
+        .welcome { text-align: center; font-size: 14px; font-weight: bold; color: #d93025; margin-bottom: 15px; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h2 style="color: #d93025; text-align: center;">QUẢN LÝ v0.7.4</h2>
-        
+        <h2 style="color: #d93025; text-align: center; margin-top:0">QUẢN LÝ v0.7.5</h2>
+        <div id="welcomeMsg" class="welcome"></div>
+
         <div id="setupArea">
+            <label style="font-size:12px">Chọn buổi học:</label>
             <select id="sessionNum">
-                <option value="1">Buổi học 1</option><option value="2">Buổi học 2</option>
-                <option value="3">Buổi học 3</option><option value="4">Buổi học 4</option>
-                <option value="5">Buổi học 5</option>
+                <option value="1">Buổi 1</option><option value="2">Buổi 2</option>
+                <option value="3">Buổi 3</option><option value="4">Buổi 4</option>
+                <option value="5">Buổi 5</option>
             </select>
-            <button id="btnOpen" onclick="manageLocation('OPEN')" style="background:#d93025;">MỞ LỚP & CHỐT VỊ TRÍ</button>
+            <button onclick="manageLocation('OPEN')" style="background:#d93025;">MỞ LỚP & CHỐT VỊ TRÍ</button>
         </div>
 
         <button id="btnClose" onclick="manageLocation('CLOSE')" style="background:#34495e; display:none;">ĐÓNG LỚP HIỆN TẠI</button>
-
         <div id="map"></div>
-        <div id="status" style="text-align:center; font-size:12px; color:#999; margin-top:10px;">Đang tải...</div>
     </div>
 
     <script>
-        const API = 'https://script.google.com/macros/s/AKfycbzwKuIfVpeUR3vVRcuDN8V48V4mx4eD4FGuPxnpCIS9Srdwx9bMLwDtaW0BdLkmhigv/exec';
+        const API = 'YOUR_WEB_APP_URL';
         var map, marker;
 
         window.onload = async () => {
-            // 1. Kiểm tra cấu hình Sheet ID cá nhân
-            let savedSid = localStorage.getItem('vdc_sid');
-            if (!savedSid) {
-                let sid = prompt("Chào Giảng viên! Hãy dán ID Sheet đào tạo của bạn để bắt đầu:");
-                if (sid) {
+            let email = localStorage.getItem('vdc_email');
+            if (!email) {
+                let name = prompt("Nhập Họ tên Giảng viên:");
+                let mail = prompt("Nhập Email của bạn:");
+                let sid = prompt("Nhập ID Sheet học viên của bạn:");
+                if (name && mail && sid) {
+                    localStorage.setItem('vdc_email', mail);
+                    localStorage.setItem('vdc_name', name);
                     localStorage.setItem('vdc_sid', sid);
-                    await fetch(API, {method: 'POST', body: JSON.stringify({action:'REGISTER_SHEET', sheetId: sid})});
-                    alert("Đăng ký thành công!");
-                }
+                    await fetch(API, {method: 'POST', body: JSON.stringify({
+                        action: 'REGISTER_SHEET', email: mail, instructorName: name, sheetId: sid
+                    })});
+                } else { alert("Bạn cần điền đủ thông tin để sử dụng!"); return; }
             }
-
+            document.getElementById('welcomeMsg').innerText = "Chào: " + localStorage.getItem('vdc_name');
             initMap();
-            const res = await fetch(API, {method: 'POST', body: JSON.stringify({action: 'CHECK_STATUS'})});
-            const data = await res.json();
-            toggleUI(data.isActive);
+            checkCurrentStatus();
         };
 
-        function toggleUI(isActive) {
-            document.getElementById('setupArea').style.display = isActive ? 'none' : 'block';
-            document.getElementById('btnClose').style.display = isActive ? 'block' : 'none';
-            document.getElementById('status').innerText = isActive ? "Lớp đang MỞ" : "Lớp đang ĐÓNG";
+        async function checkCurrentStatus() {
+            const res = await fetch(API, {method: 'POST', body: JSON.stringify({action: 'CHECK_STATUS'})});
+            const data = await res.json();
+            document.getElementById('setupArea').style.display = data.isActive ? 'none' : 'block';
+            document.getElementById('btnClose').style.display = data.isActive ? 'block' : 'none';
         }
 
         function initMap() {
             map = L.map('map').setView([10.76, 106.66], 15);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
-            navigator.geolocation.watchPosition(pos => {
-                const {latitude, longitude} = pos.coords;
-                if (marker) marker.setLatLng([latitude, longitude]);
-                else marker = L.marker([latitude, longitude]).addTo(map).bindPopup("Vị trí lớp").openPopup();
-                map.setView([latitude, longitude], 18);
-            }, null, {enableHighAccuracy: true});
+            navigator.geolocation.watchPosition(p => {
+                const latlng = [p.coords.latitude, p.coords.longitude];
+                if (marker) marker.setLatLng(latlng);
+                else marker = L.marker(latlng).addTo(map);
+                map.setView(latlng, 18);
+            }, null, {enableHighAccuracy:true});
         }
 
         async function manageLocation(mode) {
             const session = document.getElementById('sessionNum').value;
             let payload = { action: 'SET_CLASS_LOCATION', status: mode, sessionNum: session };
             if(mode === 'OPEN') {
-                if(!marker) return alert("Đang lấy GPS...");
-                const p = marker.getLatLng();
-                payload.lat = p.lat; payload.lng = p.lng;
+                if(!marker) return alert("Chưa nhận được tín hiệu GPS!");
+                payload.lat = marker.getLatLng().lat; payload.lng = marker.getLatLng().lng;
             }
-            try {
-                const res = await fetch(API, { method: 'POST', body: JSON.stringify(payload) });
-                const result = await res.json();
-                if(result.success) toggleUI(mode === 'OPEN');
-            } catch (e) { alert("Lỗi kết nối!"); }
+            const res = await fetch(API, { method: 'POST', body: JSON.stringify(payload) });
+            const result = await res.json();
+            if(result.success) location.reload();
         }
     </script>
 </body>
