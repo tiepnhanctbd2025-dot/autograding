@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VDC Admin v0.7.5</title>
+    <title>VDC Admin v0.8</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
@@ -11,15 +11,15 @@
         input, select, button { width: 100%; padding: 15px; margin-bottom: 10px; border-radius: 8px; font-weight: bold; border: 1px solid #ddd; box-sizing: border-box;}
         button { color: white; border: none; cursor: pointer; }
         #map { height: 250px; border-radius: 10px; margin: 10px 0; border: 2px solid #d93025; }
-        .welcome { text-align: center; font-size: 14px; font-weight: bold; color: #d93025; margin-bottom: 15px; }
+        .auth-bar { text-align: center; font-size: 13px; background: #eee; padding: 8px; border-radius: 5px; margin-bottom: 15px; font-weight: bold; color: #666; }
     </style>
 </head>
 <body>
     <div class="card">
-        <h2 style="color: #d93025; text-align: center; margin-top:0">QUẢN LÝ v0.7.5</h2>
-        <div id="welcomeMsg" class="welcome"></div>
+        <h2 style="color: #d93025; text-align: center; margin-top:0">QUẢN LÝ v0.8</h2>
+        <div id="authNotice" class="auth-bar">Đang xác thực tài khoản Google...</div>
 
-        <div id="setupArea">
+        <div id="setupArea" style="display:none;">
             <label style="font-size:12px">Chọn buổi học:</label>
             <select id="sessionNum">
                 <option value="1">Buổi 1</option><option value="2">Buổi 2</option>
@@ -34,34 +34,30 @@
     </div>
 
     <script>
-        const API = 'YOUR_WEB_APP_URL';
+        const API = 'https://script.google.com/macros/s/AKfycbwxyl1B6GG7M963hRGp38QrKoFFRedzeVjkGNMTca_cJX_o67X4bu0pdneOdpNZ_BiP/exec'; 
         var map, marker;
 
         window.onload = async () => {
-            let email = localStorage.getItem('vdc_email');
-            if (!email) {
-                let name = prompt("Nhập Họ tên Giảng viên:");
-                let mail = prompt("Nhập Email của bạn:");
-                let sid = prompt("Nhập ID Sheet học viên của bạn:");
-                if (name && mail && sid) {
-                    localStorage.setItem('vdc_email', mail);
-                    localStorage.setItem('vdc_name', name);
+            let sid = localStorage.getItem('vdc_sid');
+            if (!sid) {
+                sid = prompt("Hãy dán ID Sheet học viên của bạn để xác thực:");
+                if (sid) {
                     localStorage.setItem('vdc_sid', sid);
-                    await fetch(API, {method: 'POST', body: JSON.stringify({
-                        action: 'REGISTER_SHEET', email: mail, instructorName: name, sheetId: sid
-                    })});
-                } else { alert("Bạn cần điền đủ thông tin để sử dụng!"); return; }
+                    await fetch(API, {method: 'POST', body: JSON.stringify({action:'REGISTER_SHEET', sheetId: sid})});
+                } else { alert("Cần ID Sheet để tiếp tục!"); return; }
             }
-            document.getElementById('welcomeMsg').innerText = "Chào: " + localStorage.getItem('vdc_name');
             initMap();
-            checkCurrentStatus();
+            checkStatus();
         };
 
-        async function checkCurrentStatus() {
-            const res = await fetch(API, {method: 'POST', body: JSON.stringify({action: 'CHECK_STATUS'})});
-            const data = await res.json();
-            document.getElementById('setupArea').style.display = data.isActive ? 'none' : 'block';
-            document.getElementById('btnClose').style.display = data.isActive ? 'block' : 'none';
+        async function checkStatus() {
+            try {
+                const res = await fetch(API, {method: 'POST', body: JSON.stringify({action: 'CHECK_STATUS'})});
+                const data = await res.json();
+                document.getElementById('authNotice').innerText = "Đã xác thực qua Google Auth";
+                document.getElementById('setupArea').style.display = data.isActive ? 'none' : 'block';
+                document.getElementById('btnClose').style.display = data.isActive ? 'block' : 'none';
+            } catch (e) { document.getElementById('authNotice').innerText = "Lỗi xác thực!"; }
         }
 
         function initMap() {
@@ -79,7 +75,7 @@
             const session = document.getElementById('sessionNum').value;
             let payload = { action: 'SET_CLASS_LOCATION', status: mode, sessionNum: session };
             if(mode === 'OPEN') {
-                if(!marker) return alert("Chưa nhận được tín hiệu GPS!");
+                if(!marker) return alert("Chưa có tín hiệu GPS!");
                 payload.lat = marker.getLatLng().lat; payload.lng = marker.getLatLng().lng;
             }
             const res = await fetch(API, { method: 'POST', body: JSON.stringify(payload) });
