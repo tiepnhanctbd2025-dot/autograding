@@ -1,34 +1,80 @@
 <!DOCTYPE html>
 <html>
+<head>
+    <title>VDC Safety - Điểm danh trực quan</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        #map { height: 300px; width: 100%; margin-top: 10px; border-radius: 10px; border: 2px solid #1a73e8; }
+        .btn-checkin { background-color: #1a73e8; color: white; padding: 15px; border: none; border-radius: 5px; width: 100%; font-size: 16px; font-weight: bold; cursor: pointer; }
+        #status { font-family: sans-serif; color: #555; margin-top: 10px; }
+    </style>
+</head>
 <body>
-    <h2>VDC Safety - Điểm danh QR Động</h2>
-    <button onclick="checkIn()">QUÉT VÀ ĐIỂM DANH</button>
-    <p id="status"></p>
+    <div style="padding: 15px;">
+        <h2 style="color: #1a73e8;">VDC SAFETY CHECK-IN</h2>
+        <div id="status">Vui lòng cho phép truy cập vị trí...</div>
+        <div id="map"></div>
+        <br>
+        <button class="btn-checkin" onclick="performCheckIn()">XÁC NHẬN ĐIỂM DANH</button>
+    </div>
 
     <script>
-    function checkIn() {
-        document.getElementById('status').innerText = "Đang lấy vị trí...";
-        
-        if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(function(position) {
-                const data = {
-                    lat: position.coords.latitude,
-                    lng: position.coords.longitude,
-                    token: "MA_QUET_DUOC_TU_QR" // Giả định lấy từ camera
-                };
-                
-                // Gửi dữ liệu về Web App của bạn
-                fetch('https://script.google.com/macros/s/AKfycbzwKuIfVpeUR3vVRcuDN8V48V4mx4eD4FGuPxnpCIS9Srdwx9bMLwDtaW0BdLkmhigv/exec', {
-                    method: 'POST',
-                    body: JSON.stringify(data)
-                })
-                .then(res => res.json())
-                .then(out => {
-                    document.getElementById('status').innerText = "Kết quả: " + out.message;
-                });
-            });
+        var map = L.map('map').setView([10.762622, 106.660172], 18); // Tọa độ mặc định (VD: TP.HCM)
+        var userMarker, classCircle;
+
+        // Load bản đồ miễn phí từ OpenStreetMap
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+        // Giả sử tọa độ lớp học (Bạn có thể lấy từ Firebase của mình)
+        const classLat = 10.762622; 
+        const classLng = 10.760172;
+
+        // Vẽ vòng tròn vùng an toàn (50 mét)
+        classCircle = L.circle([classLat, classLng], {
+            color: 'green',
+            fillColor: '#2ecc71',
+            fillOpacity: 0.3,
+            radius: 50
+        }).addTo(map).bindPopup("Vùng an toàn lớp học");
+
+        function updateLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.watchPosition((position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    document.getElementById('status').innerText = "Đã tìm thấy vị trí của bạn!";
+
+                    // Cập nhật vị trí trên bản đồ
+                    if (userMarker) {
+                        userMarker.setLatLng([lat, lng]);
+                    } else {
+                        userMarker = L.marker([lat, lng]).addTo(map).bindPopup("Bạn đang ở đây").openPopup();
+                    }
+                    
+                    // Tự động căn giữa bản đồ theo vị trí người dùng
+                    map.setView([lat, lng], 18);
+                }, (error) => {
+                    document.getElementById('status').innerText = "Lỗi GPS: " + error.message;
+                }, { enableHighAccuracy: true });
+            }
         }
-    }
+
+        // Chạy lấy vị trí ngay khi trang web mở
+        updateLocation();
+
+        function performCheckIn() {
+            if (!userMarker) {
+                alert("Vui lòng đợi hệ thống xác định vị trí!");
+                return;
+            }
+            const currentPos = userMarker.getLatLng();
+            console.log("Gửi dữ liệu về Google Library:", currentPos.lat, currentPos.lng);
+            alert("Đang gửi dữ liệu điểm danh: " + currentPos.lat.toFixed(5));
+            // Tại đây bạn dùng fetch() để gửi về Web App Library như bài trước
+        }
     </script>
 </body>
 </html>
