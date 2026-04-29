@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VDC ADMIN v0.9.5</title>
+    <title>VDC ADMIN v0.9.9</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js"></script>
@@ -22,20 +22,14 @@
 </head>
 <body>
     <div class="card" id="loginBox" style="display:none; text-align: center;">
-        <div class="header-title">
-            <h2>HỆ THỐNG QUẢN LÝ</h2>
-            <span>PHIÊN BẢN 0.9.5</span>
-        </div>
+        <div class="header-title"><h2>HỆ THỐNG QUẢN LÝ</h2><span>PHIÊN BẢN 0.9.9</span></div>
         <button class="google-btn" onclick="handleGoogleLogin()">
             <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" width="20"> ĐĂNG NHẬP GOOGLE
         </button>
     </div>
 
     <div class="card" id="adminBox" style="display:none;">
-        <div class="header-title">
-            <h2>VDC ADMIN</h2>
-            <span>PHIÊN BẢN 0.9.5</span>
-        </div>
+        <div class="header-title"><h2>VDC ADMIN</h2><span>PHIÊN BẢN 0.9.9</span></div>
         <div class="welcome-text" id="userInfo"></div>
         <span class="config-link" onclick="resetSheet()">🔄 Thay đổi ID Sheet</span>
         <div id="setupArea">
@@ -83,8 +77,8 @@
             if (!sid) {
                 sid = prompt("Dán ID Google Sheet học viên:");
                 if (sid) {
-                    localStorage.setItem('vdc_sid', sid);
-                    await fetch(API, {method: 'POST', body: JSON.stringify({action:'REGISTER_SHEET', sheetId: sid, instructorEmail: currentUser.email})});
+                    localStorage.setItem('vdc_sid', sid.trim());
+                    await fetch(API, {method: 'POST', body: JSON.stringify({action:'REGISTER_SHEET', sheetId: sid.trim(), instructorEmail: currentUser.email})});
                 }
             }
         }
