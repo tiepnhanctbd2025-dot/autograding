@@ -13,15 +13,15 @@
         button, select { width: 100%; padding: 15px; margin-bottom: 15px; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; border: 1px solid #ddd; box-sizing: border-box; }
         #map { height: 280px; border-radius: 12px; border: 2px solid #d93025; margin-bottom: 15px; }
         .welcome-text { text-align: center; color: #d93025; font-weight: bold; margin-bottom: 20px; font-size: 14px; line-height: 1.4; }
-        .google-btn { background: white; color: #757575; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.3s; }
-        .google-btn:hover { background: #f8f8f8; }
+        .google-btn { background: white; color: #757575; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; gap: 10px; }
         h2 { text-align: center; color: #d93025; margin-top: 0; }
+        .config-link { font-size: 11px; color: #1a73e8; cursor: pointer; text-decoration: underline; margin-bottom: 10px; display: inline-block; }
     </style>
 </head>
 <body>
     <div class="card" id="loginBox" style="display:none; text-align: center;">
         <h2>HỆ THỐNG QUẢN LÝ</h2>
-        <p style="color:#666; margin-bottom: 25px;">Vui lòng đăng nhập Google để tiếp tục</p>
+        <p style="color:#666; margin-bottom: 25px;">Vui lòng đăng nhập để tiếp tục</p>
         <button class="google-btn" onclick="handleGoogleLogin()">
             <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" width="20">
             ĐĂNG NHẬP VỚI GOOGLE
@@ -32,8 +32,12 @@
         <h2>VDC ADMIN v0.9.1</h2>
         <div class="welcome-text" id="userInfo"></div>
         
+        <div style="text-align: right;">
+            <span class="config-link" onclick="resetSheetConfig()">🔄 Thay đổi ID Sheet học viên</span>
+        </div>
+
         <div id="setupArea">
-            <label style="font-size: 12px; font-weight: bold; color: #666; margin-bottom: 5px; display: block;">CHỌN BUỔI HUẤN LUYỆN:</label>
+            <label style="font-size: 12px; font-weight: bold; color: #666;">CHỌN BUỔI HỌC:</label>
             <select id="sessionNum">
                 <option value="1">Buổi học 1</option><option value="2">Buổi học 2</option>
                 <option value="3">Buổi học 3</option><option value="4">Buổi học 4</option>
@@ -43,11 +47,10 @@
         </div>
 
         <button id="btnClose" onclick="manageLocation('CLOSE')" style="background:#34495e; color:white; border: none; display:none;">ĐÓNG LỚP HIỆN TẠI</button>
-        
         <div id="map"></div>
         
         <div style="text-align: center;">
-            <button onclick="firebase.auth().signOut()" style="background:none; border:none; color:#999; font-size:12px; text-decoration:underline; width: auto; padding: 5px;">Đăng xuất tài khoản</button>
+            <button onclick="firebase.auth().signOut()" style="background:none; border:none; color:#999; font-size:12px; text-decoration:underline; width: auto;">Đăng xuất</button>
         </div>
     </div>
 
@@ -65,13 +68,12 @@
         const API = 'https://script.google.com/macros/s/AKfycbw_0bC4RVeQuwQEhx4th5UIIVpioCFmEcelW4suLR86pdXaZvFHRRByWLWuqvEALjIx/exec';
         var map, marker, currentUser;
 
-        // Kiểm tra trạng thái đăng nhập
         firebase.auth().onAuthStateChanged(user => {
             if (user) {
                 currentUser = user;
                 document.getElementById('loginBox').style.display = 'none';
                 document.getElementById('adminBox').style.display = 'block';
-                document.getElementById('userInfo').innerText = "Xin chào: " + user.displayName + "\n(" + user.email + ")";
+                document.getElementById('userInfo').innerText = "GV: " + user.displayName;
                 checkSheetConfig();
                 checkStatus();
                 initMap();
@@ -84,18 +86,28 @@
         async function handleGoogleLogin() {
             const provider = new firebase.auth.GoogleAuthProvider();
             try { await firebase.auth().signInWithPopup(provider); }
-            catch (e) { alert("Lỗi đăng nhập: " + e.message); }
+            catch (e) { alert("Lỗi: " + e.message); }
         }
 
+        // Hàm kiểm tra và yêu cầu ID Sheet
         async function checkSheetConfig() {
             let sid = localStorage.getItem('vdc_sid');
             if (!sid) {
-                sid = prompt("Dán ID Google Sheet học viên để quản lý:");
-                if (sid) {
-                    localStorage.setItem('vdc_sid', sid);
-                    await fetch(API, {method: 'POST', body: JSON.stringify({action:'REGISTER_SHEET', sheetId: sid, instructorEmail: currentUser.email})});
+                sid = prompt("Dán ID Google Sheet học viên của bạn vào đây:");
+                if (sid && sid.trim().length > 10) {
+                    localStorage.setItem('vdc_sid', sid.trim());
+                    await fetch(API, {method: 'POST', body: JSON.stringify({action:'REGISTER_SHEET', sheetId: sid.trim(), instructorEmail: currentUser.email})});
+                    alert("Cấu hình Sheet thành công!");
+                } else {
+                    alert("Bạn chưa nhập ID Sheet. Vui lòng nhấn 'Thay đổi ID Sheet' để nhập lại.");
                 }
             }
+        }
+
+        // Hàm cho phép xóa ID cũ để nhập lại
+        function resetSheetConfig() {
+            localStorage.removeItem('vdc_sid');
+            checkSheetConfig();
         }
 
         async function checkStatus() {
@@ -121,7 +133,7 @@
             const session = document.getElementById('sessionNum').value;
             let payload = { action: 'SET_CLASS_LOCATION', status: mode, sessionNum: session, instructorEmail: currentUser.email };
             if(mode === 'OPEN') {
-                if(!marker) return alert("Vui lòng chờ tín hiệu GPS ổn định!");
+                if(!marker) return alert("Chờ định vị GPS...");
                 payload.lat = marker.getLatLng().lat; payload.lng = marker.getLatLng().lng;
             }
             const res = await fetch(API, { method: 'POST', body: JSON.stringify(payload) });
