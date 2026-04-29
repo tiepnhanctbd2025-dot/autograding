@@ -2,53 +2,58 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VDC Check-in v0.9</title>
-    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <title>VDC Check-in v0.9.1</title>
     <style>
         body { font-family: sans-serif; padding: 15px; background: #f0f2f5; margin: 0; }
         .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
-        #videoContainer { position: relative; width: 100%; height: 260px; background: #000; border-radius: 10px; overflow: hidden; margin-bottom: 10px; border: 2px solid #1a73e8; }
+        #videoContainer { position: relative; width: 100%; height: 260px; background: #000; border-radius: 10px; overflow: hidden; margin-bottom: 15px; border: 2px solid #1a73e8; }
         video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
         canvas { display: none; }
-        input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
-        button { width: 100%; padding: 15px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 16px; cursor: pointer; }
+        input { width: 100%; padding: 15px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; }
+        button { width: 100%; padding: 18px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 18px; cursor: pointer; transition: 0.3s; }
+        button:disabled { background: #ccc; }
         .info-row { display: flex; gap: 10px; margin-bottom: 10px; }
-        #statusMsg { text-align:center; color:#1a73e8; font-weight:bold; display:none; margin-bottom: 10px;}
-        #successScreen, #closedScreen { display: none; text-align: center; padding: 30px 10px; }
-        .tick-icon { font-size: 70px; color: #2ecc71; }
+        #statusMsg { text-align:center; color:#1a73e8; font-weight:bold; display:none; margin-bottom: 15px; font-size: 14px; }
+        #successScreen, #closedScreen { display: none; text-align: center; padding: 40px 10px; }
+        .tick-icon { font-size: 80px; color: #2ecc71; margin-bottom: 15px; }
+        h2 { margin-top: 0; color: #1a73e8; }
     </style>
 </head>
 <body>
-    <div id="loading" style="text-align:center; padding: 20px;">Đang kết nối hệ thống...</div>
+    <div id="loading" style="text-align:center; padding: 30px; color: #666;">Đang kết nối hệ thống huấn luyện...</div>
+    
     <div class="card" id="closedScreen">
         <h2 style="color: #e74c3c;">🔒 LỚP CHƯA MỞ</h2>
-        <button onclick="location.reload()">TẢI LẠI TRANG</button>
+        <p>Vui lòng chờ giảng viên mở lớp hoặc chốt vị trí.</p>
+        <button onclick="location.reload()" style="background: #e74c3c;">TẢI LẠI TRANG</button>
     </div>
+
     <div class="card" id="inputCard" style="display:none;">
-        <h2 style="color: #1a73e8; text-align: center; margin-top:0">ĐIỂM DANH v0.9</h2>
-        <input type="text" id="searchInput" placeholder="Nhập Họ tên hoặc STT..." oninput="autoFind()">
+        <h2 style="text-align: center;">ĐIỂM DANH AN TOÀN</h2>
+        <input type="text" id="searchInput" placeholder="Tìm tên hoặc nhập STT..." oninput="autoFind()">
         <div class="info-row">
-            <input type="text" id="stt" placeholder="STT" readonly style="background:#eee; width: 30%;">
-            <input type="text" id="name" placeholder="Tên học viên" readonly style="background:#eee; width: 70%;">
+            <input type="text" id="stt" placeholder="STT" readonly style="background:#f8f8f8; width: 30%; font-weight: bold;">
+            <input type="text" id="name" placeholder="Họ và tên học viên" readonly style="background:#f8f8f8; width: 70%; font-weight: bold;">
         </div>
         <div id="videoContainer"><video id="video" autoplay playsinline></video></div>
-        <div id="statusMsg">Đang xử lý dữ liệu...</div>
+        <div id="statusMsg">⌛ Đang tải ảnh và tọa độ...</div>
         <button id="btnSubmit" onclick="checkin()">XÁC NHẬN CÓ MẶT</button>
     </div>
+
     <div class="card" id="successScreen">
         <div class="tick-icon">✔</div>
-        <h2 style="color: #2ecc71;">THÀNH CÔNG!</h2>
-        <p id="resultInfo"></p>
-        <button onclick="location.reload()" style="background: #95a5a6; margin-top: 20px;">QUAY LẠI</button>
+        <h2 style="color: #2ecc71;">ĐÃ GHI NHẬN!</h2>
+        <p id="resultInfo" style="font-size: 18px;"></p>
+        <button onclick="location.reload()" style="background: #95a5a6; margin-top: 25px;">QUAY LẠI</button>
     </div>
+
     <canvas id="canvas"></canvas>
 
     <script>
         const API = 'https://script.google.com/macros/s/AKfycbw_0bC4RVeQuwQEhx4th5UIIVpioCFmEcelW4suLR86pdXaZvFHRRByWLWuqvEALjIx/exec';
         const video = document.getElementById('video');
         const canvas = document.getElementById('canvas');
-        var userLoc;
+        var userLoc = null;
 
         window.onload = checkStatus;
 
@@ -59,12 +64,26 @@
                 document.getElementById('loading').style.display = 'none';
                 if (data.isActive) {
                     document.getElementById('inputCard').style.display = 'block';
-                    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } }).then(s => video.srcObject = s);
-                    navigator.geolocation.watchPosition(p => userLoc = {lat: p.coords.latitude, lng: p.coords.longitude}, null, {enableHighAccuracy:true});
+                    startCamera();
+                    startGPS();
                 } else {
                     document.getElementById('closedScreen').style.display = 'block';
                 }
-            } catch (e) { document.getElementById('loading').innerText = "Lỗi kết nối!"; }
+            } catch (e) { document.getElementById('loading').innerText = "Lỗi kết nối máy chủ!"; }
+        }
+
+        function startCamera() {
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } })
+            .then(s => video.srcObject = s)
+            .catch(e => alert("Vui lòng cho phép truy cập Camera để điểm danh!"));
+        }
+
+        function startGPS() {
+            navigator.geolocation.watchPosition(
+                p => userLoc = {lat: p.coords.latitude, lng: p.coords.longitude},
+                e => console.log("GPS Error"),
+                {enableHighAccuracy:true}
+            );
         }
 
         async function autoFind() {
@@ -80,14 +99,18 @@
 
         async function checkin() {
             const stt = document.getElementById('stt').value;
-            if(!stt || !userLoc) return alert("Vui lòng tìm đúng tên và bật GPS!");
+            if(!stt) return alert("Vui lòng chọn đúng tên học viên!");
+            if(!userLoc) return alert("Vui lòng bật định vị GPS!");
+
             document.getElementById('statusMsg').style.display = 'block';
             document.getElementById('btnSubmit').disabled = true;
+
             const ctx = canvas.getContext('2d');
             canvas.width = 320; canvas.height = 240;
             ctx.translate(320, 0); ctx.scale(-1, 1);
             ctx.drawImage(video, 0, 0, 320, 240);
             const img = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
+
             try {
                 const response = await fetch(API, {
                     method: 'POST',
@@ -97,9 +120,16 @@
                 if (result.success) {
                     document.getElementById('inputCard').style.display = 'none';
                     document.getElementById('successScreen').style.display = 'block';
-                    document.getElementById('resultInfo').innerHTML = `<b>${result.name}</b> đã điểm danh thành công!`;
-                } else { alert(result.msg); document.getElementById('statusMsg').style.display = 'none'; document.getElementById('btnSubmit').disabled = false; }
-            } catch (e) { alert("Lỗi gửi dữ liệu!"); }
+                    document.getElementById('resultInfo').innerHTML = `Học viên <b>${result.name}</b><br>đã hoàn thành điểm danh.`;
+                } else { 
+                    alert("Lỗi: " + result.msg); 
+                    document.getElementById('statusMsg').style.display = 'none'; 
+                    document.getElementById('btnSubmit').disabled = false; 
+                }
+            } catch (e) { 
+                alert("Lỗi mạng, vui lòng thử lại!"); 
+                document.getElementById('btnSubmit').disabled = false;
+            }
         }
     </script>
 </body>
