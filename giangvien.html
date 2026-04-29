@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VDC Admin v0.9.3</title>
+    <title>VDC Admin v0.9.4</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js"></script>
@@ -19,22 +19,22 @@
 </head>
 <body>
     <div class="card" id="loginBox" style="display:none; text-align: center;">
-        <h2 style="color:#d93025;">HỆ THỐNG QUẢN LÝ</h2>
+        <h2 style="color:#d93025;">VDC ADMIN LOGIN</h2>
         <button class="google-btn" onclick="handleGoogleLogin()">
-            <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" width="20"> ĐĂNG NHẬP GOOGLE
+            <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" width="20"> ĐĂNG NHẬP VỚI GOOGLE
         </button>
     </div>
 
     <div class="card" id="adminBox" style="display:none;">
         <div class="welcome-text" id="userInfo"></div>
-        <span class="config-link" onclick="resetSheet()">🔄 Đổi ID Sheet</span>
+        <span class="config-link" onclick="resetSheet()">🔄 Thay đổi ID Sheet học viên</span>
         <div id="setupArea">
-            <select id="sessionNum"><option value="1">Buổi 1</option><option value="2">Buổi 2</option><option value="3">Buổi 3</option></select>
+            <select id="sessionNum"><option value="1">Buổi 1</option><option value="2">Buổi 2</option><option value="3">Buổi 3</option><option value="4">Buổi 4</option><option value="5">Buổi 5</option></select>
             <button onclick="manageLocation('OPEN')" style="background:#d93025; color:white; border:none;">MỞ LỚP & CHỐT GPS</button>
         </div>
         <button id="btnClose" onclick="manageLocation('CLOSE')" style="background:#34495e; color:white; border:none; display:none;">ĐÓNG LỚP</button>
         <div id="map"></div>
-        <button onclick="firebase.auth().signOut()" style="background:none; border:none; color:#999; font-size:12px;">Đăng xuất</button>
+        <button onclick="firebase.auth().signOut()" style="background:none; border:none; color:#999; font-size:12px; cursor:pointer;">Đăng xuất</button>
     </div>
 
     <script>
@@ -55,7 +55,7 @@
                 currentUser = user;
                 document.getElementById('loginBox').style.display = 'none';
                 document.getElementById('adminBox').style.display = 'block';
-                document.getElementById('userInfo').innerText = "GV: " + user.displayName;
+                document.getElementById('userInfo').innerText = "GV: " + user.displayName + " (" + user.email + ")";
                 checkConfig(); checkStatus(); initMap();
             } else {
                 document.getElementById('loginBox').style.display = 'block';
@@ -65,7 +65,7 @@
 
         async function handleGoogleLogin() {
             const provider = new firebase.auth.GoogleAuthProvider();
-            try { await firebase.auth().signInWithPopup(provider); } catch (e) { alert(e.message); }
+            try { await firebase.auth().signInWithPopup(provider); } catch (e) { alert("Lỗi: " + e.message); }
         }
 
         async function checkConfig() {
