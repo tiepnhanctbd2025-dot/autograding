@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VDC Check-in v0.9.3</title>
+    <title>VDC Check-in v0.9.4</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { font-family: sans-serif; padding: 15px; background: #f0f2f5; margin: 0; }
@@ -11,7 +11,7 @@
         .search-container input { width: 100%; padding: 15px 45px 15px 15px; border: 2px solid #ddd; border-radius: 10px; font-size: 16px; box-sizing: border-box; outline: none; }
         .search-container i { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); color: #1a73e8; font-size: 18px; cursor: pointer; }
         .info-row { display: flex; gap: 10px; margin-bottom: 15px; }
-        .info-row input { background: #f8f8f8; border: 1px solid #eee; padding: 12px; border-radius: 8px; font-weight: bold; pointer-events: none; }
+        .info-row input { background: #f8f8f8; border: 1px solid #eee; padding: 12px; border-radius: 8px; font-weight: bold; pointer-events: none; width: 100%; box-sizing: border-box; }
         #videoContainer { width: 100%; height: 260px; background: #000; border-radius: 10px; overflow: hidden; margin-bottom: 15px; border: 2px solid #1a73e8; }
         video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
         button { width: 100%; padding: 18px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 18px; cursor: pointer; }
@@ -21,16 +21,23 @@
     </style>
 </head>
 <body>
-    <div id="loading" style="text-align:center; padding: 30px;">Đang kết nối...</div>
-    <div class="card" id="closedScreen"><h2 style="color:#e74c3c;">🔒 LỚP CHƯA MỞ</h2><button onclick="location.reload()" style="background:#e74c3c; width:100%; color:white; border:none; padding:15px; border-radius:8px;">TẢI LẠI</button></div>
+    <div id="loading" style="text-align:center; padding: 30px;">Đang kết nối hệ thống...</div>
+    <div class="card" id="closedScreen"><h2 style="color:#e74c3c;">🔒 LỚP CHƯA MỞ</h2><button onclick="location.reload()" style="background:#e74c3c; width:100%; color:white; border:none; padding:15px; border-radius:8px; font-weight:bold;">TẢI LẠI TRANG</button></div>
     <div class="card" id="inputCard" style="display:none;">
-        <div class="search-container"><input type="text" id="searchInput" placeholder="Tìm tên không dấu (vd: dep)..." onkeyup="if(event.keyCode===13) autoFind()"><i class="fa-solid fa-magnifying-glass" onclick="autoFind()"></i></div>
-        <div class="info-row"><input type="text" id="stt" placeholder="STT" style="width:25%;"><input type="text" id="name" placeholder="Học viên" style="width:75%;"></div>
+        <h2 style="text-align: center; color: #1a73e8; margin-top: 0;">ĐIỂM DANH AN TOÀN</h2>
+        <div class="search-container">
+            <input type="text" id="searchInput" placeholder="Tìm tên không dấu (vd: dep)..." onkeyup="if(event.keyCode===13) autoFind()">
+            <i class="fa-solid fa-magnifying-glass" onclick="autoFind()"></i>
+        </div>
+        <div class="info-row">
+            <div style="width:25%"><input type="text" id="stt" placeholder="STT"></div>
+            <div style="width:75%"><input type="text" id="name" placeholder="Tên học viên"></div>
+        </div>
         <div id="videoContainer"><video id="video" autoplay playsinline></video></div>
-        <div id="statusMsg">⌛ Đang xử lý...</div>
+        <div id="statusMsg">⌛ Đang xử lý dữ liệu...</div>
         <button id="btnSubmit" onclick="checkin()">XÁC NHẬN CÓ MẶT</button>
     </div>
-    <div class="card" id="successScreen"><h2 style="color:#2ecc71;">ĐÃ GHI NHẬN!</h2><p id="resultInfo"></p><button onclick="location.reload()" style="background:#95a5a6; border:none; color:white; padding:15px; border-radius:8px; width:100%;">QUAY LẠI</button></div>
+    <div class="card" id="successScreen"><div style="font-size:70px; color:#2ecc71;">✔</div><h2 style="color:#2ecc71;">ĐÃ GHI NHẬN!</h2><p id="resultInfo" style="font-size:18px;"></p><button onclick="location.reload()" style="background:#95a5a6; border:none; color:white; padding:15px; border-radius:8px; width:100%; font-weight:bold; margin-top:20px;">QUAY LẠI</button></div>
     <canvas id="canvas" style="display:none;"></canvas>
     <script>
         const API = 'https://script.google.com/macros/s/AKfycbw_0bC4RVeQuwQEhx4th5UIIVpioCFmEcelW4suLR86pdXaZvFHRRByWLWuqvEALjIx/exec';
@@ -49,11 +56,11 @@
             } catch (e) { document.getElementById('loading').innerText = "Lỗi kết nối!"; }
         }
         async function autoFind() {
-            const val = document.getElementById('searchInput').value; if (val.length < 2) return;
+            const val = document.getElementById('searchInput').value.trim(); if (val.length < 2) return;
             const res = await fetch(API, { method: 'POST', body: JSON.stringify({action: 'GET_INFO', input: val}) });
             const data = await res.json();
             if (data.success) { document.getElementById('stt').value = data.stt; document.getElementById('name').value = data.name; }
-            else { document.getElementById('stt').value = ""; document.getElementById('name').value = "Không thấy!"; }
+            else { document.getElementById('stt').value = ""; document.getElementById('name').value = "Không tìm thấy!"; }
         }
         async function checkin() {
             const stt = document.getElementById('stt').value; if(!stt || !userLoc) return alert("Tìm đúng tên & chờ GPS!");
@@ -62,11 +69,11 @@
             canvas.width = 320; canvas.height = 240; ctx.translate(320, 0); ctx.scale(-1, 1); ctx.drawImage(video, 0, 0, 320, 240);
             const img = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
             try {
-                const response = await fetch(API, { method: 'POST', body: JSON.stringify({stt: stt, userLat: userLoc.lat, userLng: userLoc.lng, image: img, instructorEmail: "Học viên"}) });
+                const response = await fetch(API, { method: 'POST', body: JSON.stringify({stt: stt, userLat: userLoc.lat, userLng: userLoc.lng, image: img}) });
                 const result = await response.json();
-                if (result.success) { document.getElementById('inputCard').style.display = 'none'; document.getElementById('successScreen').style.display = 'block'; document.getElementById('resultInfo').innerHTML = `Học viên <b>${result.name}</b> thành công.`; }
+                if (result.success) { document.getElementById('inputCard').style.display = 'none'; document.getElementById('successScreen').style.display = 'block'; document.getElementById('resultInfo').innerHTML = `Học viên <b>${result.name}</b> đã điểm danh thành công.`; }
                 else { alert(result.msg); document.getElementById('statusMsg').style.display = 'none'; document.getElementById('btnSubmit').disabled = false; }
-            } catch (e) { alert("Lỗi mạng!"); }
+            } catch (e) { alert("Lỗi gửi dữ liệu!"); }
         }
     </script>
 </body>
