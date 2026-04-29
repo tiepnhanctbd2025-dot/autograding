@@ -2,41 +2,53 @@
 <html>
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VDC Admin v0.9 - Firebase</title>
+    <title>VDC Admin v0.9.1 - Google Login</title>
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.0.0/firebase-auth-compat.js"></script>
     <style>
-        body { font-family: sans-serif; padding: 15px; background: #fff5f5; }
-        .card { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
-        input, select, button { width: 100%; padding: 15px; margin-bottom: 10px; border-radius: 8px; font-weight: bold; border: 1px solid #ddd; box-sizing: border-box; }
-        #map { height: 250px; border-radius: 10px; border: 2px solid #d93025; margin: 10px 0; }
-        .user-info { font-size: 13px; text-align: center; color: #d93025; font-weight: bold; margin-bottom: 10px; }
+        body { font-family: sans-serif; padding: 15px; background: #fff5f5; margin: 0; }
+        .card { background: white; padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 500px; margin: auto; }
+        button, select { width: 100%; padding: 15px; margin-bottom: 15px; border-radius: 10px; font-weight: bold; font-size: 16px; cursor: pointer; border: 1px solid #ddd; box-sizing: border-box; }
+        #map { height: 280px; border-radius: 12px; border: 2px solid #d93025; margin-bottom: 15px; }
+        .welcome-text { text-align: center; color: #d93025; font-weight: bold; margin-bottom: 20px; font-size: 14px; line-height: 1.4; }
+        .google-btn { background: white; color: #757575; border: 1px solid #ddd; display: flex; align-items: center; justify-content: center; gap: 10px; transition: 0.3s; }
+        .google-btn:hover { background: #f8f8f8; }
+        h2 { text-align: center; color: #d93025; margin-top: 0; }
     </style>
 </head>
 <body>
-    <div class="card" id="loginBox" style="display:none;">
-        <h2 style="text-align:center; color:#d93025;">ADMIN LOGIN</h2>
-        <input type="email" id="email" placeholder="Email">
-        <input type="password" id="password" placeholder="Mật khẩu">
-        <button onclick="handleLogin()" style="background:#d93025; color:white;">ĐĂNG NHẬP</button>
+    <div class="card" id="loginBox" style="display:none; text-align: center;">
+        <h2>HỆ THỐNG QUẢN LÝ</h2>
+        <p style="color:#666; margin-bottom: 25px;">Vui lòng đăng nhập Google để tiếp tục</p>
+        <button class="google-btn" onclick="handleGoogleLogin()">
+            <img src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" width="20">
+            ĐĂNG NHẬP VỚI GOOGLE
+        </button>
     </div>
 
     <div class="card" id="adminBox" style="display:none;">
-        <h2 style="text-align:center; color:#d93025; margin-top:0;">VDC ADMIN v0.9</h2>
-        <div id="userInfo" class="user-info"></div>
+        <h2>VDC ADMIN v0.9.1</h2>
+        <div class="welcome-text" id="userInfo"></div>
+        
         <div id="setupArea">
+            <label style="font-size: 12px; font-weight: bold; color: #666; margin-bottom: 5px; display: block;">CHỌN BUỔI HUẤN LUYỆN:</label>
             <select id="sessionNum">
-                <option value="1">Buổi 1</option><option value="2">Buổi 2</option>
-                <option value="3">Buổi 3</option><option value="4">Buổi 4</option>
-                <option value="5">Buổi 5</option>
+                <option value="1">Buổi học 1</option><option value="2">Buổi học 2</option>
+                <option value="3">Buổi học 3</option><option value="4">Buổi học 4</option>
+                <option value="5">Buổi học 5</option>
             </select>
-            <button onclick="manageLocation('OPEN')" style="background:#d93025; color:white;">MỞ LỚP & CHỐT VỊ TRÍ</button>
+            <button onclick="manageLocation('OPEN')" style="background:#d93025; color:white; border: none;">MỞ LỚP & CHỐT VỊ TRÍ</button>
         </div>
-        <button id="btnClose" onclick="manageLocation('CLOSE')" style="background:#34495e; color:white; display:none;">ĐÓNG LỚP</button>
+
+        <button id="btnClose" onclick="manageLocation('CLOSE')" style="background:#34495e; color:white; border: none; display:none;">ĐÓNG LỚP HIỆN TẠI</button>
+        
         <div id="map"></div>
-        <button onclick="firebase.auth().signOut()" style="background:none; border:none; color:#666; font-size:11px; cursor:pointer;">Đăng xuất</button>
+        
+        <div style="text-align: center;">
+            <button onclick="firebase.auth().signOut()" style="background:none; border:none; color:#999; font-size:12px; text-decoration:underline; width: auto; padding: 5px;">Đăng xuất tài khoản</button>
+        </div>
     </div>
 
     <script>
@@ -53,12 +65,13 @@
         const API = 'https://script.google.com/macros/s/AKfycbw_0bC4RVeQuwQEhx4th5UIIVpioCFmEcelW4suLR86pdXaZvFHRRByWLWuqvEALjIx/exec';
         var map, marker, currentUser;
 
+        // Kiểm tra trạng thái đăng nhập
         firebase.auth().onAuthStateChanged(user => {
             if (user) {
                 currentUser = user;
                 document.getElementById('loginBox').style.display = 'none';
                 document.getElementById('adminBox').style.display = 'block';
-                document.getElementById('userInfo').innerText = "Đang trực: " + user.email;
+                document.getElementById('userInfo').innerText = "Xin chào: " + user.displayName + "\n(" + user.email + ")";
                 checkSheetConfig();
                 checkStatus();
                 initMap();
@@ -68,17 +81,16 @@
             }
         });
 
-        async function handleLogin() {
-            const email = document.getElementById('email').value;
-            const pass = document.getElementById('password').value;
-            try { await firebase.auth().signInWithEmailAndPassword(email, pass); }
-            catch (e) { alert("Lỗi: " + e.message); }
+        async function handleGoogleLogin() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            try { await firebase.auth().signInWithPopup(provider); }
+            catch (e) { alert("Lỗi đăng nhập: " + e.message); }
         }
 
         async function checkSheetConfig() {
             let sid = localStorage.getItem('vdc_sid');
             if (!sid) {
-                sid = prompt("Dán ID Sheet học viên của bạn:");
+                sid = prompt("Dán ID Google Sheet học viên để quản lý:");
                 if (sid) {
                     localStorage.setItem('vdc_sid', sid);
                     await fetch(API, {method: 'POST', body: JSON.stringify({action:'REGISTER_SHEET', sheetId: sid, instructorEmail: currentUser.email})});
@@ -94,6 +106,7 @@
         }
 
         function initMap() {
+            if (map) return;
             map = L.map('map').setView([10.76, 106.66], 15);
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
             navigator.geolocation.watchPosition(p => {
@@ -108,7 +121,7 @@
             const session = document.getElementById('sessionNum').value;
             let payload = { action: 'SET_CLASS_LOCATION', status: mode, sessionNum: session, instructorEmail: currentUser.email };
             if(mode === 'OPEN') {
-                if(!marker) return alert("Chờ GPS!");
+                if(!marker) return alert("Vui lòng chờ tín hiệu GPS ổn định!");
                 payload.lat = marker.getLatLng().lat; payload.lng = marker.getLatLng().lng;
             }
             const res = await fetch(API, { method: 'POST', body: JSON.stringify(payload) });
