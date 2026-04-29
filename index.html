@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
     <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VDC CHECK-IN v1.0.0</title>
+    <title>VDC CHECK-IN v1.0.1</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         body { font-family: sans-serif; padding: 15px; background: #f0f2f5; margin: 0; }
@@ -18,8 +18,6 @@
         #videoContainer { width: 100%; height: 260px; background: #000; border-radius: 10px; overflow: hidden; margin-bottom: 15px; border: 2px solid #1a73e8; }
         video { width: 100%; height: 100%; object-fit: cover; transform: scaleX(-1); }
         button { width: 100%; padding: 18px; background: #1a73e8; color: white; border: none; border-radius: 8px; font-weight: bold; font-size: 18px; cursor: pointer; }
-        
-        /* Style cho bảng danh sách */
         .list-card { max-width: 500px; margin: auto; background: white; border-radius: 12px; padding: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.1); }
         .list-card h3 { font-size: 14px; color: #666; border-bottom: 1px solid #eee; padding-bottom: 10px; margin-top: 0; }
         table { width: 100%; border-collapse: collapse; font-size: 13px; }
@@ -29,10 +27,9 @@
     </style>
 </head>
 <body>
-    <div id="loading" style="text-align:center; padding: 30px; color: #666;">Đang kết nối hệ thống v1.0.0...</div>
-    
+    <div id="loading" style="text-align:center; padding: 30px; color: #666;">Đang kết nối hệ thống v1.0.1...</div>
     <div class="card" id="inputCard" style="display:none;">
-        <div class="header-title"><h2>ĐIỂM DANH AN TOÀN</h2><span>PHIÊN BẢN 1.0.0</span></div>
+        <div class="header-title"><h2>ĐIỂM DANH AN TOÀN</h2><span>PHIÊN BẢN 1.0.1</span></div>
         <div class="search-container">
             <input type="text" id="searchInput" placeholder="Tìm tên hoặc STT..." onkeyup="if(event.keyCode===13) autoFind()">
             <i id="searchIcon" class="fa-solid fa-magnifying-glass" onclick="autoFind()"></i>
@@ -44,43 +41,32 @@
         <div id="videoContainer"><video id="video" autoplay playsinline></video></div>
         <button id="btnSubmit" onclick="checkin()">XÁC NHẬN CÓ MẶT</button>
     </div>
-
     <div class="list-card" id="listArea" style="display:none;">
-        <h3><i class="fa-solid fa-list"></i> DANH SÁCH HỌC VIÊN TRONG SHEET</h3>
+        <h3><i class="fa-solid fa-list"></i> DANH SÁCH HỌC VIÊN</h3>
         <table id="studentTable">
             <thead><tr><th>TT</th><th>Họ và tên</th></tr></thead>
-            <tbody id="studentBody"><tr><td colspan="2" style="text-align:center;">Đang tải danh sách...</td></tr></tbody>
+            <tbody id="studentBody"><tr><td colspan="2" style="text-align:center;">Đang tải...</td></tr></tbody>
         </table>
     </div>
-
     <canvas id="canvas" style="display:none;"></canvas>
-
     <script>
         const API = 'https://script.google.com/macros/s/AKfycbw_0bC4RVeQuwQEhx4th5UIIVpioCFmEcelW4suLR86pdXaZvFHRRByWLWuqvEALjIx/exec';
         const video = document.getElementById('video');
         var userLoc = null;
-
         window.onload = checkStatus;
 
         async function checkStatus() {
             try {
                 const res = await fetch(API, { method: 'POST', body: JSON.stringify({action: 'CHECK_STATUS'}) });
-                const data = await res.json(); 
-                document.getElementById('loading').style.display = 'none';
+                const data = await res.json(); document.getElementById('loading').style.display = 'none';
                 if (data.isActive) {
                     document.getElementById('inputCard').style.display = 'block';
                     document.getElementById('listArea').style.display = 'block';
-                    startCamera();
+                    navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } }).then(s => video.srcObject = s);
                     loadStudentList();
                     navigator.geolocation.watchPosition(p => userLoc = {lat: p.coords.latitude, lng: p.coords.longitude}, null, {enableHighAccuracy:true});
-                } else {
-                    document.body.innerHTML = '<div class="card" style="text-align:center;"><h2>🔒 LỚP CHƯA MỞ</h2><button onclick="location.reload()">TẢI LẠI</button></div>';
-                }
-            } catch (e) { document.getElementById('loading').innerText = "Lỗi kết nối!"; }
-        }
-
-        function startCamera() {
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" } }).then(s => video.srcObject = s);
+                } else document.body.innerHTML = '<div class="card" style="text-align:center;"><h2>🔒 LỚP CHƯA MỞ</h2><button onclick="location.reload()">TẢI LẠI</button></div>';
+            } catch (e) { document.getElementById('loading').innerText = "Lỗi kết nối API!"; }
         }
 
         async function loadStudentList() {
@@ -91,9 +77,9 @@
                 if (data.success) {
                     tbody.innerHTML = data.students.map(s => `<tr><td>${s.stt}</td><td>${s.name}</td></tr>`).join('');
                 } else {
-                    tbody.innerHTML = '<tr><td colspan="2" style="color:red;">Không thể tải danh sách. Kiểm tra ID Sheet!</td></tr>';
+                    tbody.innerHTML = `<tr><td colspan="2" style="color:red; font-weight:bold;">${data.msg}</td></tr>`;
                 }
-            } catch (e) { }
+            } catch (e) { document.getElementById('studentBody').innerHTML = '<tr><td colspan="2">Lỗi tải danh sách.</td></tr>'; }
         }
 
         async function autoFind() {
@@ -107,18 +93,17 @@
                 if (data.success) {
                     document.getElementById('stt').value = data.stt;
                     document.getElementById('name').value = data.name;
-                }
+                } else { document.getElementById('name').value = "Không thấy!"; }
             } finally { icon.className = 'fa-solid fa-magnifying-glass'; }
         }
 
         async function checkin() {
             const stt = document.getElementById('stt').value;
-            if(!stt || !userLoc) return alert("Vui lòng chọn tên & chờ GPS!");
+            if(!stt || !userLoc) return alert("Tìm tên & chờ GPS!");
             const canvas = document.getElementById('canvas');
             const ctx = canvas.getContext('2d');
             canvas.width = 320; canvas.height = 240;
-            ctx.translate(320, 0); ctx.scale(-1, 1);
-            ctx.drawImage(video, 0, 0, 320, 240);
+            ctx.translate(320, 0); ctx.scale(-1, 1); ctx.drawImage(video, 0, 0, 320, 240);
             const img = canvas.toDataURL('image/jpeg', 0.6).split(',')[1];
             try {
                 const response = await fetch(API, { method: 'POST', body: JSON.stringify({stt: stt, userLat: userLoc.lat, userLng: userLoc.lng, image: img, instructorEmail: "Học viên"}) });
